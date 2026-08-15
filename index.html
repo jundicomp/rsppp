@@ -178,6 +178,7 @@ body{
   margin:0 auto;
 }
 .dapil-card{
+  position:relative;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -192,6 +193,22 @@ body{
   text-align:center;
   color:inherit;
   text-decoration:none;
+}
+.dapil-status{
+  position:absolute;
+  top:8px; right:8px;
+  width:19px; height:19px;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 1px 3px rgba(0,0,0,0.3), 0 0 0 2px var(--surface-2);
+  z-index:2;
+}
+.dapil-status svg{ width:11px; height:11px; }
+.dapil-status.ok{ background:#0ca30c; color:#fff; }
+.dapil-status.missing{ background:#d03b3b; color:#fff; }
+@media (max-width:460px){
+  .dapil-status{ width:16px; height:16px; top:6px; right:6px; }
+  .dapil-status svg{ width:9px; height:9px; }
 }
 .dapil-card:hover, .dapil-card:focus-visible{
   transform:translateY(-2px);
@@ -441,6 +458,7 @@ body{
 
     <div class="dapil-grid">
       <button class="dapil-card" data-target="dapil1" type="button" style="--card-accent:#2a78d6;--card-accent-bg:rgba(42,120,214,0.12);">
+        <span class="dapil-status ok" title="Data sudah tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 9 17 20 6"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
@@ -452,6 +470,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="dapil2" type="button" style="--card-accent:#eb6834;--card-accent-bg:rgba(235,104,52,0.12);">
+        <span class="dapil-status ok" title="Data sudah tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 9 17 20 6"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
@@ -463,6 +482,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="gabungan" type="button" style="--card-accent:#1baf7a;--card-accent-bg:rgba(27,175,122,0.12);">
+        <span class="dapil-status ok" title="Data sudah tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 9 17 20 6"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
         </div>
@@ -474,6 +494,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="rekayasa" type="button" style="--card-accent:#8b5cf6;--card-accent-bg:rgba(139,92,246,0.12);">
+        <span class="dapil-status ok" title="Data sudah tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 9 17 20 6"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
         </div>
@@ -485,6 +506,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="komposisi" type="button" style="--card-accent:#d03b3b;--card-accent-bg:rgba(208,59,59,0.12);">
+        <span class="dapil-status ok" title="Data sudah tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 9 17 20 6"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="12" y="8" width="3" height="10" rx="1"/><rect x="17" y="5" width="3" height="13" rx="1"/></svg>
         </div>
@@ -496,6 +518,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="sumsel3" type="button" style="--card-accent:#64748b;--card-accent-bg:rgba(100,116,139,0.12);">
+        <span class="dapil-status missing" title="Data belum tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
@@ -505,6 +528,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="sumsel4" type="button" style="--card-accent:#64748b;--card-accent-bg:rgba(100,116,139,0.12);">
+        <span class="dapil-status missing" title="Data belum tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
@@ -514,6 +538,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="sumsel5" type="button" style="--card-accent:#64748b;--card-accent-bg:rgba(100,116,139,0.12);">
+        <span class="dapil-status missing" title="Data belum tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
@@ -523,6 +548,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="sumsel6" type="button" style="--card-accent:#64748b;--card-accent-bg:rgba(100,116,139,0.12);">
+        <span class="dapil-status missing" title="Data belum tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
@@ -532,6 +558,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="sumsel7" type="button" style="--card-accent:#64748b;--card-accent-bg:rgba(100,116,139,0.12);">
+        <span class="dapil-status missing" title="Data belum tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
@@ -541,6 +568,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="sumsel8" type="button" style="--card-accent:#64748b;--card-accent-bg:rgba(100,116,139,0.12);">
+        <span class="dapil-status missing" title="Data belum tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
@@ -550,6 +578,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="sumsel9" type="button" style="--card-accent:#64748b;--card-accent-bg:rgba(100,116,139,0.12);">
+        <span class="dapil-status missing" title="Data belum tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
@@ -559,6 +588,7 @@ body{
       </button>
 
       <button class="dapil-card" data-target="sumsel10" type="button" style="--card-accent:#64748b;--card-accent-bg:rgba(100,116,139,0.12);">
+        <span class="dapil-status missing" title="Data belum tersedia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
         <div class="dapil-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
