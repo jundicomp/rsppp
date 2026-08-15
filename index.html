@@ -499,6 +499,60 @@ body{
   0%, 100%{ transform:scale(1); }
   50%{ transform:scale(1.08); }
 }
+
+/* ---------- update-available banner (deploy baru terdeteksi di GitHub) ---------- */
+.update-banner{
+  position:fixed;
+  top:0; left:0; right:0;
+  z-index:950;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  flex-wrap:wrap;
+  padding:11px 44px 11px 16px;
+  background:linear-gradient(90deg, #1c5cab, #2a78d6);
+  color:#fff;
+  font-size:12.5px;
+  font-weight:700;
+  text-align:center;
+  box-shadow:0 4px 14px rgba(0,0,0,0.25);
+  transform:translateY(-100%);
+  transition:transform .35s cubic-bezier(.4,0,.2,1);
+}
+.update-banner.show{ transform:translateY(0); }
+.update-banner svg{ width:16px; height:16px; flex-shrink:0; }
+.update-banner .ub-text{ display:flex; align-items:center; gap:8px; }
+.update-banner .ub-reload{
+  padding:6px 14px;
+  border-radius:999px;
+  border:none;
+  background:#fff;
+  color:#1c5cab;
+  font-weight:800;
+  font-size:12px;
+  cursor:pointer;
+  font-family:inherit;
+  transition:filter .15s ease;
+}
+.update-banner .ub-reload:hover{ filter:brightness(0.95); }
+.update-banner .ub-dismiss{
+  position:absolute;
+  top:50%; right:12px; transform:translateY(-50%);
+  width:24px; height:24px;
+  border-radius:50%;
+  border:none;
+  background:rgba(255,255,255,0.18);
+  color:#fff;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-family:inherit;
+}
+.update-banner .ub-dismiss:hover{ background:rgba(255,255,255,0.3); }
+.update-banner .ub-dismiss svg{ width:12px; height:12px; }
+@media (max-width:560px){
+  .update-banner{ font-size:11.5px; padding:10px 40px 10px 12px; }
+}
 </style>
 </head>
 <body>
@@ -522,6 +576,17 @@ body{
   <div class="prelock-label">Halaman akan terkunci dalam</div>
   <div class="prelock-number" id="prelockNumber">10</div>
   <div class="prelock-hint">Gerakkan mouse, ketik, atau sentuh layar untuk membatalkan</div>
+</div>
+
+<div class="update-banner" id="updateBanner">
+  <div class="ub-text">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 1-2.34-5.66"/><polyline points="20 4 20 11 13 11"/></svg>
+    <span>Versi baru situs ini sudah tersedia.</span>
+  </div>
+  <button class="ub-reload" id="ubReloadBtn" type="button">Muat Ulang</button>
+  <button class="ub-dismiss" id="ubDismissBtn" type="button" aria-label="Tutup" title="Tutup">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+  </button>
 </div>
 
 <button class="lock-now-btn" id="lockNowBtn" type="button" title="Kunci halaman sekarang">
@@ -952,6 +1017,69 @@ themeSwitch.addEventListener('click', function(){
   frame.addEventListener('load', hookFrameActivity);
 
   showLock();
+})();
+
+/* ---------- deteksi deploy baru di GitHub (polling commit terbaru repo) ---------- */
+(function(){
+  var GH_REPO = 'jundicomp/rsppp';
+  var CHECK_INTERVAL_MS = 4 * 60 * 1000; // cek tiap 4 menit
+  var API_URL = 'https://api.github.com/repos/' + GH_REPO + '/commits?per_page=1';
+
+  var banner = document.getElementById('updateBanner');
+  var reloadBtn = document.getElementById('ubReloadBtn');
+  var dismissBtn = document.getElementById('ubDismissBtn');
+  if (!banner) return;
+
+  var knownSha = null;   // sha commit yang "aktif" saat halaman ini pertama dibuka
+  var dismissed = false;
+  var checkTimer = null;
+
+  function showBanner(){
+    if (dismissed) return;
+    banner.classList.add('show');
+  }
+  function hideBanner(){
+    banner.classList.remove('show');
+  }
+
+  function fetchLatestSha(){
+    return fetch(API_URL, { headers:{ 'Accept':'application/vnd.github+json' }, cache:'no-store' })
+      .then(function(res){ return res.ok ? res.json() : null; })
+      .then(function(data){
+        if (data && data.length && data[0] && data[0].sha) return data[0].sha;
+        return null;
+      })
+      .catch(function(){ return null; }); // gagal (offline/rate-limit) -> abaikan diam-diam
+  }
+
+  function checkForUpdate(){
+    fetchLatestSha().then(function(sha){
+      if (!sha) return;
+      if (knownSha === null){
+        knownSha = sha; // baseline: versi yang dianggap "aktif" saat sesi ini dimulai
+        return;
+      }
+      if (sha !== knownSha){
+        showBanner();
+      }
+    });
+  }
+
+  reloadBtn.addEventListener('click', function(){
+    location.reload();
+  });
+  dismissBtn.addEventListener('click', function(){
+    dismissed = true;
+    hideBanner();
+  });
+
+  checkForUpdate();
+  checkTimer = setInterval(checkForUpdate, CHECK_INTERVAL_MS);
+
+  // cek juga begitu tab kembali aktif (misal user sempat pindah tab lama)
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') checkForUpdate();
+  });
 })();
 </script>
 </body>
