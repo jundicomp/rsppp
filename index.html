@@ -115,6 +115,39 @@ body{
   :root[data-theme="dark"] .ts-thumb{ transform:translateX(25px); }
 }
 
+/* ---------- lock-now button (kunci manual, tanpa menunggu timer) ---------- */
+.lock-now-btn{
+  position:fixed;
+  top:16px; right:84px;
+  z-index:60;
+  display:flex; align-items:center; gap:6px;
+  padding:0 14px;
+  height:30px;
+  border-radius:999px;
+  background:var(--surface-2);
+  border:1px solid rgba(208,59,59,0.4);
+  color:#d0393b;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.2px;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+  font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.lock-now-btn svg{ width:14px; height:14px; flex-shrink:0; }
+.lock-now-btn:hover{ background:rgba(208,59,59,0.12); box-shadow:var(--shadow-hover); }
+.lock-now-btn:active{ transform:translateY(1px); }
+@media (max-width:460px){
+  .lock-now-btn{ top:10px; right:64px; height:27px; padding:0 10px; font-size:10.5px; gap:4px; }
+  .lock-now-btn svg{ width:12px; height:12px; }
+}
+@media (max-width:340px){
+  .lock-now-btn span{ display:none; }
+  .lock-now-btn{ width:27px; padding:0; justify-content:center; }
+}
+
 /* ---------- landing (selection) view ---------- */
 #landing{
   min-height:100vh;
@@ -422,6 +455,50 @@ body{
   color:var(--text-muted);
   line-height:1.5;
 }
+
+/* ---------- pre-lock countdown (10s warning before auto-lock) ---------- */
+.prelock-overlay{
+  position:fixed;
+  inset:0;
+  z-index:900;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:24px;
+  text-align:center;
+  background:rgba(10,8,6,0.35);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  cursor:pointer;
+}
+.prelock-label{
+  font-size:14.5px;
+  font-weight:800;
+  color:#fff;
+  letter-spacing:.2px;
+  text-shadow:0 2px 10px rgba(0,0,0,0.55);
+}
+.prelock-number{
+  font-size:clamp(2.3cm, 16vw, 5cm);
+  line-height:1;
+  font-weight:900;
+  color:#fff;
+  font-variant-numeric:tabular-nums;
+  text-shadow:0 4px 26px rgba(0,0,0,0.6), 0 0 46px rgba(244,96,10,0.4);
+  animation:prelockPulse 1s ease-in-out infinite;
+}
+.prelock-hint{
+  font-size:12.5px;
+  font-weight:700;
+  color:rgba(255,255,255,0.9);
+  text-shadow:0 2px 8px rgba(0,0,0,0.5);
+}
+@keyframes prelockPulse{
+  0%, 100%{ transform:scale(1); }
+  50%{ transform:scale(1.08); }
+}
 </style>
 </head>
 <body>
@@ -440,6 +517,17 @@ body{
     <div class="lock-foot">Halaman ini terkunci otomatis setelah 1 menit tidak ada aktivitas.</div>
   </div>
 </div>
+
+<div class="prelock-overlay" id="prelockOverlay">
+  <div class="prelock-label">Halaman akan terkunci dalam</div>
+  <div class="prelock-number" id="prelockNumber">10</div>
+  <div class="prelock-hint">Gerakkan mouse, ketik, atau sentuh layar untuk membatalkan</div>
+</div>
+
+<button class="lock-now-btn" id="lockNowBtn" type="button" title="Kunci halaman sekarang">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+  <span>Lock</span>
+</button>
 
 <button class="theme-switch" id="themeSwitch" type="button" aria-label="Ganti mode terang / gelap" aria-pressed="false" title="Mode terang / gelap">
   <span class="ts-track">
@@ -714,9 +802,41 @@ themeSwitch.addEventListener('click', function(){
   var input = document.getElementById('lockInput');
   var errorEl = document.getElementById('lockError');
   var timerText = document.getElementById('lockTimerText');
+  var prelockOverlay = document.getElementById('prelockOverlay');
+  var prelockNumber = document.getElementById('prelockNumber');
 
   var locked = true;
   var idleTimer = null;
+
+  /* ---- hitung mundur 10 detik sebelum halaman terkunci otomatis ---- */
+  var PRELOCK_SECONDS = 10;
+  var prelockInterval = null;
+  var prelockActive = false;
+
+  function hidePrelock(){
+    prelockActive = false;
+    clearInterval(prelockInterval);
+    prelockInterval = null;
+    if (prelockOverlay) prelockOverlay.style.display = 'none';
+  }
+
+  function startPrelockCountdown(){
+    if (locked || !prelockOverlay || !prelockNumber) return;
+    prelockActive = true;
+    var n = PRELOCK_SECONDS;
+    prelockNumber.textContent = n;
+    prelockOverlay.style.display = 'flex';
+    clearInterval(prelockInterval);
+    prelockInterval = setInterval(function(){
+      n--;
+      if (n <= 0){
+        hidePrelock();
+        showLock();
+        return;
+      }
+      prelockNumber.textContent = n;
+    }, 1000);
+  }
 
   /* gradasi warna berjalan perlahan & acak: Orange, Merah, Putih, Hitam, Kuning emas, Abu */
   var gradientTimer = null;
@@ -765,6 +885,7 @@ themeSwitch.addEventListener('click', function(){
   function showLock(){
     locked = true;
     clearTimeout(idleTimer);
+    hidePrelock();
     overlay.style.display = 'flex';
     errorEl.style.display = 'none';
     input.value = '';
@@ -785,8 +906,9 @@ themeSwitch.addEventListener('click', function(){
 
   function resetIdleTimer(){
     if (locked) return;
+    if (prelockActive) hidePrelock();
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(showLock, LOCK_TIMEOUT_MS);
+    idleTimer = setTimeout(startPrelockCountdown, Math.max(0, LOCK_TIMEOUT_MS - PRELOCK_SECONDS*1000));
   }
 
   function tryUnlock(){
@@ -803,6 +925,15 @@ themeSwitch.addEventListener('click', function(){
     e.preventDefault();
     tryUnlock();
   });
+
+  /* tombol kunci manual: langsung kembali ke layar kunci, tanpa menunggu timer idle */
+  var lockNowBtn = document.getElementById('lockNowBtn');
+  if (lockNowBtn){
+    lockNowBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      showLock();
+    });
+  }
 
   var ACTIVITY_EVENTS = ['mousemove','mousedown','keydown','touchstart','scroll','click','wheel'];
   ACTIVITY_EVENTS.forEach(function(evt){
