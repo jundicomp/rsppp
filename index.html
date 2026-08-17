@@ -148,6 +148,42 @@ body{
   .lock-now-btn{ width:27px; padding:0; justify-content:center; }
 }
 
+/* ---------- idle auto-lock countdown badge (top-right, kontras) ---------- */
+.idle-timer-badge{
+  position:fixed;
+  top:16px; right:174px;
+  z-index:60;
+  display:none;
+  align-items:center;
+  gap:6px;
+  padding:0 14px;
+  height:30px;
+  border-radius:999px;
+  background:var(--pks-orange);
+  color:#fff;
+  font-size:12.5px;
+  font-weight:800;
+  letter-spacing:.3px;
+  font-variant-numeric:tabular-nums;
+  box-shadow:var(--shadow);
+  font-family:inherit;
+  pointer-events:none;
+  transition:background .15s ease;
+}
+.idle-timer-badge svg{ width:14px; height:14px; flex-shrink:0; }
+.idle-timer-badge.warn{
+  background:#d0393b;
+  animation:idleTimerPulse 1s ease-in-out infinite;
+}
+@keyframes idleTimerPulse{
+  0%, 100%{ transform:scale(1); }
+  50%{ transform:scale(1.07); }
+}
+@media (max-width:460px){
+  .idle-timer-badge{ top:50px; right:10px; height:24px; padding:0 10px; font-size:10.5px; gap:4px; }
+  .idle-timer-badge svg{ width:11px; height:11px; }
+}
+
 /* ---------- landing (selection) view ---------- */
 #landing{
   min-height:100vh;
@@ -624,7 +660,7 @@ body{
       <button type="submit" class="lock-btn">Buka</button>
     </form>
     <div class="lock-error" id="lockError">Kata sandi salah. Coba lagi.</div>
-    <div class="lock-foot">Halaman ini terkunci otomatis setelah 1 menit tidak ada aktivitas.</div>
+    <div class="lock-foot">Halaman ini terkunci otomatis setelah 90 detik tidak ada aktivitas.</div>
   </div>
 </div>
 
@@ -649,6 +685,11 @@ body{
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
   <span>Lock</span>
 </button>
+
+<div class="idle-timer-badge" id="idleTimerBadge" title="Sisa waktu sebelum halaman terkunci otomatis">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><polyline points="12 7 12 12 15.5 14"/></svg>
+  <span id="idleTimerText">01:30</span>
+</div>
 
 <button class="theme-switch" id="themeSwitch" type="button" aria-label="Ganti mode terang / gelap" aria-pressed="false" title="Mode terang / gelap">
   <span class="ts-track">
@@ -989,7 +1030,7 @@ themeSwitch.addEventListener('click', function(){
 /* ---------- lock screen (password + 1 minute auto-lock) ---------- */
 (function(){
   var LOCK_PASSWORD = 'RSPPP2026';
-  var LOCK_TIMEOUT_MS = 60000; // 1 minute of inactivity
+  var LOCK_TIMEOUT_MS = 90000; // 90 seconds of inactivity
 
   var overlay = document.getElementById('lockOverlay');
   var form = document.getElementById('lockForm');
@@ -998,6 +1039,8 @@ themeSwitch.addEventListener('click', function(){
   var timerText = document.getElementById('lockTimerText');
   var prelockOverlay = document.getElementById('prelockOverlay');
   var prelockNumber = document.getElementById('prelockNumber');
+  var idleBadge = document.getElementById('idleTimerBadge');
+  var idleBadgeText = document.getElementById('idleTimerText');
 
   var locked = true;
   var idleTimer = null;
@@ -1076,10 +1119,36 @@ themeSwitch.addEventListener('click', function(){
     lockStartTime = null;
   }
 
+  /* badge kanan-atas: hitung mundur sisa waktu sebelum auto-lock */
+  var idleDeadline = null;
+  var idleBadgeTimer = null;
+  function updateIdleBadge(){
+    if (locked || !idleDeadline || !idleBadgeText) return;
+    var remainMs = idleDeadline - Date.now();
+    if (remainMs < 0) remainMs = 0;
+    var totalSec = Math.ceil(remainMs/1000);
+    var m = Math.floor(totalSec/60), s = totalSec%60;
+    idleBadgeText.textContent = pad2(m)+':'+pad2(s);
+    if (idleBadge) idleBadge.classList.toggle('warn', totalSec <= PRELOCK_SECONDS);
+  }
+  function startIdleBadge(){
+    if (idleBadge) idleBadge.style.display = 'flex';
+    updateIdleBadge();
+    clearInterval(idleBadgeTimer);
+    idleBadgeTimer = setInterval(updateIdleBadge, 250);
+  }
+  function stopIdleBadge(){
+    clearInterval(idleBadgeTimer);
+    idleBadgeTimer = null;
+    idleDeadline = null;
+    if (idleBadge) idleBadge.style.display = 'none';
+  }
+
   function showLock(){
     locked = true;
     clearTimeout(idleTimer);
     hidePrelock();
+    stopIdleBadge();
     overlay.style.display = 'flex';
     errorEl.style.display = 'none';
     input.value = '';
@@ -1096,12 +1165,15 @@ themeSwitch.addEventListener('click', function(){
     stopGradient();
     stopLockTimer();
     resetIdleTimer();
+    startIdleBadge();
   }
 
   function resetIdleTimer(){
     if (locked) return;
     if (prelockActive) hidePrelock();
     clearTimeout(idleTimer);
+    idleDeadline = Date.now() + LOCK_TIMEOUT_MS;
+    updateIdleBadge();
     idleTimer = setTimeout(startPrelockCountdown, Math.max(0, LOCK_TIMEOUT_MS - PRELOCK_SECONDS*1000));
   }
 
