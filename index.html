@@ -353,6 +353,33 @@ body{
 }
 .back-btn:hover{ background:rgba(255,255,255,0.2); }
 .viewer-title{ font-size:13.5px; font-weight:700; opacity:0.9; }
+.credit-marquee{
+  flex:0 0 auto;
+  overflow:hidden;
+  background:var(--sidebar-bg, #17140f);
+  border-top:1px solid rgba(255,255,255,0.08);
+  padding:4px 0;
+}
+.credit-marquee-track{
+  display:inline-flex;
+  white-space:nowrap;
+  animation:creditMarqueeScroll 22s linear infinite;
+  will-change:transform;
+}
+.credit-marquee-track span{
+  padding:0 32px;
+  font-size:10.3px;
+  font-weight:600;
+  letter-spacing:.02em;
+  color:rgba(255,255,255,0.55);
+}
+@keyframes creditMarqueeScroll{
+  0%{ transform:translateX(0); }
+  100%{ transform:translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce){
+  .credit-marquee-track{ animation:none; }
+}
 #frame{
   flex:1 1 auto;
   width:100%;
@@ -559,6 +586,15 @@ body{
   color:var(--text-muted);
   line-height:1.5;
 }
+.lock-credit{
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px dashed var(--border);
+  font-size:10.5px;
+  color:var(--text-muted);
+  line-height:1.6;
+  letter-spacing:.01em;
+}
 
 /* ---------- pre-lock countdown (10s warning before auto-lock) ---------- */
 .prelock-overlay{
@@ -673,6 +709,7 @@ body{
     </form>
     <div class="lock-error" id="lockError">Kata sandi salah. Coba lagi.</div>
     <div class="lock-foot">Halaman ini terkunci otomatis setelah 90 detik tidak ada aktivitas.</div>
+    <div class="lock-credit">Dibuat oleh:<br>Bidang RSPPP &middot; DPW PKS Sumatera Selatan<br>17 Agustus 2026</div>
   </div>
 </div>
 
@@ -912,6 +949,12 @@ body{
       Pilih Dapil
     </button>
     <div class="viewer-title" id="viewerTitle"></div>
+  </div>
+  <div class="credit-marquee" aria-hidden="true">
+    <div class="credit-marquee-track">
+      <span>Dibuat oleh: Bidang RSPPP &middot; DPW PKS Sumatera Selatan &middot; 17 Agustus 2026</span>
+      <span>Dibuat oleh: Bidang RSPPP &middot; DPW PKS Sumatera Selatan &middot; 17 Agustus 2026</span>
+    </div>
   </div>
   <iframe id="frame" title="Rekap Model D"></iframe>
 </div>
