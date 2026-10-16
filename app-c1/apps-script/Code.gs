@@ -342,8 +342,9 @@ function submit_(r, u) {
 }
 
 function dashboard_(r, u) {
+  // Semua role melihat ringkasan semua DPD (hanya angka agregat, bukan isi dokumen),
+  // supaya operator DPD bisa membandingkan progresnya dengan DPD lain.
   var dpds = rows_('DPD');
-  if (u.role === 'dpd') dpds = dpds.filter(function (d) { return d.id === u.dpdId; });
   var c1 = rows_('C1'), bc = rows_('Bacaleg'), subs = rows_('Submissions');
   return dpds.map(function (d) {
     var counts = {};

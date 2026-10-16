@@ -137,7 +137,7 @@ export function createDemo() {
       db.submissions.push(row); return row;
     }],
     dashboard: [ALL, (db, r, u) => {
-      const dpds = u.role === 'dpd' ? db.dpd.filter((d) => d.id === u.dpdId) : db.dpd;
+      const dpds = db.dpd;
       return dpds.map((d) => {
         const counts = Object.fromEntries(JENIS.map((j) => [j.id, 0]));
         let last = '';

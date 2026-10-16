@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 
 /* ---------- Toast ---------- */
@@ -108,15 +108,59 @@ export function SearchBox({ value, onChange, placeholder = 'Cari…' }) {
   );
 }
 
+/**
+ * Baris tab yang bisa digeser. Kalau tab tidak muat, muncul tombol panah berdenyut
+ * sebagai tanda masih ada tab lain di samping.
+ */
+export function ScrollRow({ className, label, children }) {
+  const ref = useRef(null);
+  const lastActive = useRef(null);
+  const [left, setLeft] = useState(false);
+  const [right, setRight] = useState(false);
+  const update = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    setLeft(el.scrollLeft > 4);
+    setRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    if (ro) ro.observe(el);
+    return () => { el.removeEventListener('scroll', update); window.removeEventListener('resize', update); if (ro) ro.disconnect(); };
+  }, [update]);
+  useEffect(() => {
+    update();
+    const el = ref.current;
+    const act = el && el.querySelector('[aria-selected="true"]');
+    if (act && act !== lastActive.current) {
+      if (lastActive.current) act.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+      lastActive.current = act;
+    }
+  });
+  const go = (d) => ref.current && ref.current.scrollBy({ left: d * ref.current.clientWidth * 0.7, behavior: 'smooth' });
+  return (
+    <div className={'srow' + (left ? ' has-l' : '') + (right ? ' has-r' : '')}>
+      <div ref={ref} className={className} role="tablist" aria-label={label}>{children}</div>
+      {left && <button type="button" className="srow-btn left" aria-label="Geser tab ke kiri" onClick={() => go(-1)}><Icon name="chevronLeft" size={20} stroke={2.5} /></button>}
+      {right && <button type="button" className="srow-btn right pulse" aria-label="Geser tab ke kanan" onClick={() => go(1)}><Icon name="chevronRight" size={20} stroke={2.5} /></button>}
+    </div>
+  );
+}
+
 /** Tab di atas tabel, dikelompokkan per tingkatan. tabs: [{ id, label, count }] */
 export function TableTabs({ tabs, value, onChange, label = 'Kelompok' }) {
   return (
-    <div className="ttabs" role="tablist" aria-label={label}>
+    <ScrollRow className="ttabs" label={label}>
       {tabs.map((t) => (
         <button key={t.id || 'all'} role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)}>
           {t.label}{t.count !== undefined && <span>{t.count}</span>}
         </button>
       ))}
-    </div>
+    </ScrollRow>
   );
 }

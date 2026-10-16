@@ -9,7 +9,7 @@ import { dpdProgress, countsFromC1 } from '../lib/progress.js';
 import { buildWaReport } from '../lib/report.js';
 import Icon from '../components/Icon.jsx';
 import DpdPicker from '../components/DpdPicker.jsx';
-import { Loading, Modal, ProgressLine, useToast } from '../components/ui.jsx';
+import { Loading, Modal, ProgressLine, ScrollRow, useToast } from '../components/ui.jsx';
 
 let slotSeq = 0;
 const newSlot = () => ({ key: 's' + ++slotSeq, status: 'empty', progress: 0, keterangan: '', fileName: '', error: '' });
@@ -219,20 +219,20 @@ export default function Input() {
       </section>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div className="tabs-line" role="tablist" aria-label="Kategori">
+        <ScrollRow className="tabs-line" label="Kategori">
           <button role="tab" aria-selected={cat === 'c1'} onClick={() => setCat('c1')}>Dokumen C1 <span className="pill-count">{c1List.length}</span></button>
           <button role="tab" aria-selected={cat === 'bacaleg'} onClick={() => setCat('bacaleg')}>Usulan Bacaleg <span className="pill-count">{bacaleg.length}</span></button>
-        </div>
+        </ScrollRow>
 
         {cat === 'c1' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div className="segmented" role="tablist" aria-label="Jenis pemilihan">
+            <ScrollRow className="segmented" label="Jenis pemilihan">
               {JENIS.map((j) => (
                 <button key={j.id} role="tab" aria-selected={tab === j.id} onClick={() => setTab(j.id)}>
                   {j.label} <small>{c1List.filter((x) => x.jenis === j.id).length}</small>
                 </button>
               ))}
-            </div>
+            </ScrollRow>
 
             <div className="card" style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted)' }}>
