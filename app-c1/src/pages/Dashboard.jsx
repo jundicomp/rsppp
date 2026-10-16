@@ -6,7 +6,7 @@ import { rankDpd } from '../lib/progress.js';
 import { downloadText, fmtDateTime, toCsv } from '../lib/format.js';
 import Icon from '../components/Icon.jsx';
 import Capaian from '../components/Capaian.jsx';
-import { Loading, MiniBars, ProgressLine, SearchBox } from '../components/ui.jsx';
+import { Loading, MiniBars, ProgressLine, SearchBox, TableTabs } from '../components/ui.jsx';
 
 function status(r) {
   if (!r.hasTarget) return { label: 'Kecamatan belum diisi', cls: 'off' };
@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [at, setAt] = useState(null);
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
+  const [tk, setTk] = useState('');
 
   const load = useCallback(() => {
     setBusy(true);
@@ -53,7 +54,14 @@ export default function Dashboard() {
   const top = ranked.filter((r) => r.hasTarget && r.totalFiles > 0).slice(0, 3);
   const attention = ranked.filter((r) => !r.hasTarget || !r.totalFiles);
   const ql = q.toLowerCase().trim();
-  const list = ranked.filter((r) => !ql || r.nama.toLowerCase().includes(ql));
+  // tab per tingkatan: urutkan ulang berdasarkan capaian tingkatan yang dipilih
+  const view = tk
+    ? ranked.map((r) => { const p = r.per.find((x) => x.id === tk); return { ...r, vPct: p.pct, vFiles: p.count, vPr: p.pr }; })
+      .sort((a, b) => b.vPct - a.vPct || b.vFiles - a.vFiles || a.nama.localeCompare(b.nama))
+      .map((r, i) => ({ ...r, vRank: i + 1 }))
+    : ranked.map((r) => ({ ...r, vPct: r.pct, vFiles: r.totalFiles, vPr: r.pr, vRank: r.rank }));
+  const list = view.filter((r) => !ql || r.nama.toLowerCase().includes(ql));
+  const tkLabel = tk ? JENIS.find((j) => j.id === tk).label : '';
 
   const openRekap = (id) => { sessionStorage.setItem('c1_dpd', id); nav('/rekap'); };
   const exportCsv = () => downloadText('Peringkat_Capaian_DPD.csv', toCsv(ranked, [
@@ -81,13 +89,13 @@ export default function Dashboard() {
       <section className="kpis">
         <div className="kpi"><span>Capaian se-provinsi</span><b>{agg.pct}%</b><small>{agg.done} dari {agg.target} dokumen target</small></div>
         <div className="kpi"><span>Total file C1</span><b>{totalFiles}</b><small>dari semua DPD</small></div>
-        <div className="kpi"><span>DPD sudah upload</span><b>{active}<span style={{ fontSize: 16, color: 'var(--muted)', fontWeight: 600 }}> / {ranked.length}</span></b><small>{ranked.length - active} belum mulai</small></div>
+        <div className="kpi"><span>DPD sudah upload</span><b>{active}<span style={{ fontSize: 16, color: 'var(--ink)', fontWeight: 600 }}> / {ranked.length}</span></b><small>{ranked.length - active} belum mulai</small></div>
         <div className="kpi"><span>Usulan bacaleg</span><b>{totalBacaleg}</b><small>nama diusulkan</small></div>
       </section>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-          <h2 className="card-title" style={{ fontSize: 16 }}>Capaian tertinggi</h2>
+          <h2 className="card-title">Capaian tertinggi</h2>
           <span className="card-sub">Persentase upload C1 terhadap target kecamatan</span>
         </div>
         {top.length ? (
@@ -112,33 +120,37 @@ export default function Dashboard() {
       <section className="card" style={{ overflow: 'hidden' }}>
         <div className="card-head">
           <div>
-            <h2 className="card-title">Peringkat capaian DPD</h2>
-            <div className="card-sub">Diurutkan dari persentase tertinggi · klik baris untuk lihat rekap DPD</div>
+            <h2 className="card-title">Peringkat capaian DPD{tk ? ' · ' + tkLabel : ''}</h2>
+            <div className="card-sub hint-text">Klik baris untuk melihat rekap DPD</div>
           </div>
           <div className="tools"><SearchBox value={q} onChange={setQ} placeholder="Cari DPD" /></div>
         </div>
+        <TableTabs label="Tingkatan" value={tk} onChange={setTk}
+          tabs={[{ id: '', label: 'Semua tingkatan' }, ...JENIS.map((j) => ({ id: j.id, label: j.label }))]} />
         <div className="table-wrap">
           <table className="tbl" style={{ minWidth: 920 }}>
             <thead>
-              <tr><th>#</th><th>DPD</th><th>Kec.</th><th title="DPR RI · DPRD Prov · DPRD Kab/Kota · DPD RI · Pilpres">Per tingkatan</th><th style={{ width: 220 }}>Capaian</th><th>File</th><th>Bacaleg</th><th>Upload terakhir</th><th>Status</th></tr>
+              {tk
+                ? <tr><th>#</th><th>DPD</th><th>Kec.</th><th style={{ width: 240 }}>Capaian {tkLabel}</th><th>File C1</th><th>PR (kec.)</th><th>Upload terakhir</th><th>Status</th></tr>
+                : <tr><th>#</th><th>DPD</th><th>Kec.</th><th title="DPR RI · DPRD Prov · DPRD Kab/Kota · DPD RI · Pilpres">Per tingkatan</th><th style={{ width: 220 }}>Capaian</th><th>File</th><th>Bacaleg</th><th>Upload terakhir</th><th>Status</th></tr>}
             </thead>
             <tbody>
               {list.map((r) => {
                 const st = status(r);
                 return (
                   <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => openRekap(r.id)}>
-                    <td className="num" style={{ fontWeight: r.rank <= 3 ? 700 : 400, color: r.rank <= 3 ? 'var(--ink)' : undefined }}>{r.rank}</td>
+                    <td className="num" style={{ fontWeight: r.vRank <= 3 ? 800 : 600 }}>{r.vRank}</td>
                     <td className="strong">{r.nama.replace('DPD PKS ', '')}</td>
                     <td className="muted">{r.K || '–'}</td>
-                    <td><MiniBars per={r.per} /></td>
+                    {!tk && <td><MiniBars per={r.per} /></td>}
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ flex: 1 }}><ProgressLine pct={r.pct} /></div>
-                        <b style={{ width: 40, textAlign: 'right' }}>{r.pct}%</b>
+                        <div style={{ flex: 1 }}><ProgressLine pct={r.vPct} done={r.vPct >= 100} /></div>
+                        <b style={{ width: 44, textAlign: 'right' }}>{r.vPct}%</b>
                       </div>
                     </td>
-                    <td>{r.totalFiles}</td>
-                    <td>{r.bacaleg}</td>
+                    <td>{r.vFiles}</td>
+                    <td>{tk ? (r.K ? r.vPr : '–') : r.bacaleg}</td>
                     <td className="muted nowrap">{r.lastUpload ? fmtDateTime(r.lastUpload) : '–'}</td>
                     <td><span className={'badge ' + st.cls}>{st.label}</span></td>
                   </tr>
@@ -147,15 +159,17 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
-        <div className="card-sub" style={{ padding: '10px 20px', borderTop: '1px solid var(--line-2)' }}>
-          Batang kecil = DPR RI · DPRD Provinsi · DPRD Kab/Kota · DPD RI · Pilpres (arahkan kursor untuk detail).
-        </div>
+        {!tk && (
+          <div className="card-sub hint-text" style={{ padding: '10px 20px', borderTop: '1px solid var(--line-2)' }}>
+            Batang kecil = DPR RI · DPRD Provinsi · DPRD Kab/Kota · DPD RI · Pilpres. Pilih tab di atas tabel untuk peringkat per tingkatan.
+          </div>
+        )}
       </section>
 
       {attention.length > 0 && (
         <section className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <h2 className="card-title">Perlu ditindaklanjuti ({attention.length})</h2>
-          <div className="card-sub">DPD yang belum mengisi jumlah kecamatan atau belum mengupload sama sekali.</div>
+          <div className="card-sub hint-text">DPD yang belum mengisi jumlah kecamatan atau belum mengupload sama sekali.</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {attention.map((r) => (
               <button key={r.id} className="badge" style={{ border: '1px solid var(--line)', cursor: 'pointer', padding: '6px 10px' }} onClick={() => openRekap(r.id)}>

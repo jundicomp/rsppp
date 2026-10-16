@@ -36,7 +36,7 @@ export default function Login() {
           <h1>Upload Dokumen <span>C1 Pemilu 2024</span></h1>
           <p>Untuk DPD PKS Kota/Kabupaten se-Sumatera Selatan: upload C1 DPR RI, DPRD Provinsi, DPRD Kab/Kota, DPD RI, dan Pilpres, serta usulan nama bacaleg. Bisa dicicil dan dilanjutkan kapan saja.</p>
         </div>
-        <div style={{ fontSize: 13, color: '#8e8880' }}>Akun dibuat oleh admin. Lupa password? Hubungi admin.</div>
+        <div style={{ fontSize: 14, color: '#fff' }}>Akun dibuat oleh admin. Lupa password? Hubungi admin.</div>
       </aside>
       <main className="login-main">
         <form className="login-form" onSubmit={submit}>
@@ -64,7 +64,7 @@ export default function Login() {
             </div>
           </div>
           <button className="btn btn-primary" type="submit" disabled={busy} style={{ height: 46 }}>{busy ? 'Memeriksa…' : 'Masuk'}</button>
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--muted)', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ink)', flexWrap: 'wrap', gap: 8 }}>
             <span>Dibuat oleh <strong style={{ color: 'var(--ink)', fontWeight: 600 }}>{CREDIT}</strong></span>
             <span>© {YEAR}</span>
           </div>

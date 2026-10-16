@@ -50,7 +50,7 @@ export default function Settings() {
       <section className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <h2 className="card-title">Laporan WhatsApp</h2>
-          <div className="card-sub">Setelah DPD menekan Submit, laporan dikirim ke nomor ini.</div>
+          <div className="card-sub hint-text">Setelah DPD menekan Submit, laporan dikirim ke nomor ini.</div>
         </div>
         <div className="grid-2">
           <div className="field">
@@ -74,7 +74,7 @@ export default function Settings() {
         <div className="card-head">
           <div>
             <h2 className="card-title">Data DPD & jumlah kecamatan</h2>
-            <div className="card-sub">Jumlah kecamatan jadi target progres. Operator DPD juga bisa mengisi sendiri di halaman Input.</div>
+            <div className="card-sub hint-text">Jumlah kecamatan jadi target progres. Operator DPD juga bisa mengisi sendiri di halaman Input.</div>
           </div>
           <button className="btn btn-primary btn-sm" style={{ height: 40 }} disabled={!dirty || busy} onClick={saveDpds}>Simpan perubahan</button>
         </div>
@@ -103,7 +103,7 @@ export default function Settings() {
 
       <section className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <h2 className="card-title">Penyimpanan file</h2>
-        <div className="card-sub" style={{ fontSize: 13, lineHeight: 1.6 }}>
+        <div className="card-sub hint-text" style={{ lineHeight: 1.6 }}>
           {isDemo
             ? 'Mode demo: file tidak benar-benar disimpan. Isi VITE_API_URL agar file masuk ke folder Google Drive.'
             : 'File C1 disimpan di folder Google Drive yang ID-nya diatur di Script Properties (FOLDER_ID), dengan subfolder otomatis per DPD lalu per jenis pemilihan.'}

@@ -107,3 +107,16 @@ export function SearchBox({ value, onChange, placeholder = 'Cari…' }) {
     </div>
   );
 }
+
+/** Tab di atas tabel, dikelompokkan per tingkatan. tabs: [{ id, label, count }] */
+export function TableTabs({ tabs, value, onChange, label = 'Kelompok' }) {
+  return (
+    <div className="ttabs" role="tablist" aria-label={label}>
+      {tabs.map((t) => (
+        <button key={t.id || 'all'} role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)}>
+          {t.label}{t.count !== undefined && <span>{t.count}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
