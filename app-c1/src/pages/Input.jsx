@@ -370,8 +370,8 @@ function SlotItem({ no, slot, label, disabled, onFiles, onNote, onRemove }) {
             onDragOver={(e) => { e.preventDefault(); setOver(true); }}
             onDragLeave={() => setOver(false)}
             onDrop={(e) => { e.preventDefault(); setOver(false); if (!disabled) onFiles(e.dataTransfer.files); }}>
-            <Icon name="upload" size={20} stroke={1.8} style={{ color: 'var(--muted)' }} />
-            <span><b style={{ fontWeight: 600 }}>Pilih file C1</b> <span style={{ color: 'var(--muted)' }}>atau seret ke sini · PDF / foto · bisa pilih beberapa sekaligus</span></span>
+            <Icon name="upload" size={22} stroke={2} style={{ color: 'var(--hint)' }} />
+            <span><b style={{ fontWeight: 600 }}>Pilih file C1</b> <span className="hint-text">atau seret ke sini · PDF / foto · bisa pilih beberapa sekaligus</span></span>
           </button>
           {slot.status === 'error' && <div className="notice err">Upload "{slot.fileName}" gagal: {slot.error}. Pilih file lagi untuk mencoba ulang.</div>}
         </>

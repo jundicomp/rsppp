@@ -35,9 +35,9 @@ export default function Capaian({ prog, title = 'Capaian Upload C1', active, onP
             </button>
           ))}
           {prog.K > 0 && (
-            <div style={{ margin: '8px 12px 4px', paddingTop: 12, borderTop: '1px dashed var(--line)', fontSize: 13, color: 'var(--muted)' }}>
+            <div style={{ margin: '8px 12px 4px', paddingTop: 12, borderTop: '1px dashed var(--line)', fontSize: 14, color: 'var(--ink)' }}>
               {worst.pr > 0
-                ? <>PR terbanyak di <b style={{ color: 'var(--ink)' }}>{worst.label}</b>: masih {worst.pr} kecamatan belum upload.{onPick ? ' Klik baris untuk memfilter tabel.' : ''}</>
+                ? <>PR terbanyak di <b style={{ color: 'var(--ink)' }}>{worst.label}</b>: masih {worst.pr} kecamatan belum upload.{onPick && <span className="hint-text"> Klik baris untuk memfilter tabel.</span>}</>
                 : <>Semua tingkatan sudah 100%. Alhamdulillah.</>}
             </div>
           )}

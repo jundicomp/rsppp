@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useDpdList, useDpdRecords } from '../hooks/useDpdData.js';
-import { JENIS_LABEL, TINGKAT } from '../lib/constants.js';
+import { JENIS, JENIS_LABEL, TINGKAT } from '../lib/constants.js';
 import { dpdProgress, countsFromC1 } from '../lib/progress.js';
 import { downloadText, fmtDate, fmtTime, toCsv } from '../lib/format.js';
 import Icon from '../components/Icon.jsx';
 import Capaian from '../components/Capaian.jsx';
 import DpdPicker from '../components/DpdPicker.jsx';
-import { Loading, SearchBox } from '../components/ui.jsx';
+import { Loading, SearchBox, TableTabs } from '../components/ui.jsx';
 
 const LIMIT = 15;
 
@@ -70,16 +70,18 @@ export default function Rekap() {
                 <div className="card-head">
                   <div>
                     <h2 className="card-title">Dokumen C1 · {jenis ? JENIS_LABEL[jenis] : 'Semua jenis'}</h2>
-                    <div className="card-sub">{c1Rows.length} dari {c1.length} dokumen{jenis && <> · <button className="btn-plain" style={{ border: 0, background: 'none', color: 'var(--brand-ink)', cursor: 'pointer', padding: 0, font: 'inherit' }} onClick={() => setJenis('')}>tampilkan semua</button></>}</div>
+                    <div className="card-sub">Menampilkan {c1Rows.length} dari {c1.length} dokumen</div>
                   </div>
                   <div className="tools">
                     <SearchBox value={q} onChange={setQ} placeholder="Cari keterangan / file / nama" />
                     <button className="btn btn-ghost btn-sm" style={{ height: 40 }} onClick={exportC1}><Icon name="download" size={16} /> Unduh Excel (CSV)</button>
                   </div>
                 </div>
+                <TableTabs label="Tingkatan C1" value={jenis} onChange={(j) => { setJenis(j); setAll(false); }}
+                  tabs={[{ id: '', label: 'Semua', count: c1.length }, ...JENIS.map((j) => ({ id: j.id, label: j.label, count: c1.filter((x) => x.jenis === j.id).length }))]} />
                 <div className="table-wrap">
                   <table className="tbl" style={{ minWidth: 900 }}>
-                    <thead><tr><th>No</th><th>Jenis</th><th>Keterangan</th><th>Nama File</th><th>Diupload oleh</th><th>Tanggal</th><th>Waktu</th><th /></tr></thead>
+                    <thead><tr><th>No</th><th>Jenis</th><th>Keterangan</th><th>Nama File</th><th>Diupload oleh</th><th>Tanggal</th><th>Waktu</th><th>File</th></tr></thead>
                     <tbody>
                       {visible.map((r, i) => (
                         <tr key={r.id}>
@@ -90,7 +92,7 @@ export default function Rekap() {
                           <td className="nowrap">{r.uploader}</td>
                           <td className="nowrap">{fmtDate(r.uploadedAt)}</td>
                           <td className="nowrap">{fmtTime(r.uploadedAt)}</td>
-                          <td style={{ textAlign: 'right' }}>{r.fileUrl ? <a href={r.fileUrl} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600, textDecoration: 'none' }}>Lihat</a> : <span className="muted">–</span>}</td>
+                          <td style={{ textAlign: 'right' }}>{r.fileUrl ? <a href={r.fileUrl} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: 'var(--hint)' }}>Lihat</a> : <span className="muted">–</span>}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -108,25 +110,19 @@ export default function Rekap() {
 
           {cat === 'bacaleg' && (
             <>
-              <section className="kpis" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
-                {TINGKAT.map((t) => (
-                  <button key={t} className="kpi" onClick={() => setTingkat(tingkat === t ? '' : t)}
-                    style={{ textAlign: 'left', border: 0, borderRight: '1px solid var(--line-2)', cursor: 'pointer', background: tingkat === t ? 'var(--surface-2)' : '#fff', boxShadow: tingkat === t ? 'inset 0 -2px 0 var(--brand)' : 'none' }}>
-                    <span>Caleg {t}</span><b>{bacaleg.filter((b) => b.tingkat === t).length}</b>
-                  </button>
-                ))}
-              </section>
               <section className="card" style={{ overflow: 'hidden' }}>
                 <div className="card-head">
                   <div>
                     <h2 className="card-title">Usulan Bacaleg · {tingkat || 'Semua tingkat'}</h2>
-                    <div className="card-sub">{bRows.length} dari {bacaleg.length} usulan</div>
+                    <div className="card-sub">Menampilkan {bRows.length} dari {bacaleg.length} usulan</div>
                   </div>
                   <div className="tools">
                     <SearchBox value={q} onChange={setQ} placeholder="Cari nama / pengusul" />
                     <button className="btn btn-ghost btn-sm" style={{ height: 40 }} onClick={exportB}><Icon name="download" size={16} /> Unduh Excel (CSV)</button>
                   </div>
                 </div>
+                <TableTabs label="Tingkat caleg" value={tingkat} onChange={setTingkat}
+                  tabs={[{ id: '', label: 'Semua', count: bacaleg.length }, ...TINGKAT.map((t) => ({ id: t, label: t, count: bacaleg.filter((b) => b.tingkat === t).length }))]} />
                 <div className="table-wrap">
                   <table className="tbl" style={{ minWidth: 980 }}>
                     <thead><tr><th>No</th><th>Nama Bacaleg</th><th>Tingkat</th><th style={{ width: 300 }}>Profil Singkat</th><th>Pengusul / Rekomendasi</th><th>Dicatat oleh</th><th>Tanggal &amp; Waktu</th></tr></thead>

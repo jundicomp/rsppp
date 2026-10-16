@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { ROLES, ROLE_LABEL } from '../lib/constants.js';
 import { fmtDateTime } from '../lib/format.js';
 import Icon from '../components/Icon.jsx';
-import { Loading, Modal, SearchBox, useToast } from '../components/ui.jsx';
+import { Loading, Modal, SearchBox, TableTabs, useToast } from '../components/ui.jsx';
 
 const blank = { id: '', username: '', nama: '', role: 'dpd', dpdId: '', password: '', aktif: true };
 
@@ -91,12 +91,10 @@ export default function Users() {
           <div><h2 className="card-title">Daftar user</h2><div className="card-sub">{list.length} user</div></div>
           <div className="tools">
             <SearchBox value={q} onChange={setQ} placeholder="Cari username / nama / DPD" />
-            <select className="select" style={{ height: 40, width: 170 }} value={role} onChange={(e) => setRole(e.target.value)} aria-label="Filter role">
-              <option value="">Semua role</option>
-              {ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
-            </select>
           </div>
         </div>
+        <TableTabs label="Hak akses" value={role} onChange={setRole}
+          tabs={[{ id: '', label: 'Semua', count: (users || []).length }, ...ROLES.map((r) => ({ id: r.id, label: r.label, count: (users || []).filter((u) => u.role === r.id).length }))]} />
         {!users ? <div style={{ padding: 20 }}><Loading /></div> : (
           <div className="table-wrap">
             <table className="tbl" style={{ minWidth: 860 }}>
