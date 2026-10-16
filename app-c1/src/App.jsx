@@ -30,7 +30,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Home />} />
-      <Route path="/dashboard" element={<Guard roles={['superadmin', 'admin']}><Dashboard /></Guard>} />
+      <Route path="/dashboard" element={<Guard><Dashboard /></Guard>} />
       <Route path="/input" element={<Guard roles={['superadmin', 'dpd']} narrow><Input /></Guard>} />
       <Route path="/rekap" element={<Guard><Rekap /></Guard>} />
       <Route path="/users" element={<Guard roles={['superadmin']}><Users /></Guard>} />

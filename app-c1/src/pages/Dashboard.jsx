@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { call } from '../api/index.js';
+import { useAuth } from '../auth/AuthContext.jsx';
 import { JENIS } from '../lib/constants.js';
 import { rankDpd } from '../lib/progress.js';
 import { downloadText, fmtDateTime, toCsv } from '../lib/format.js';
@@ -17,6 +18,8 @@ function status(r) {
 
 export default function Dashboard() {
   const nav = useNavigate();
+  const { user } = useAuth();
+  const isDpd = user.role === 'dpd';
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState('');
   const [at, setAt] = useState(null);
@@ -63,7 +66,9 @@ export default function Dashboard() {
   const list = view.filter((r) => !ql || r.nama.toLowerCase().includes(ql));
   const tkLabel = tk ? JENIS.find((j) => j.id === tk).label : '';
 
-  const openRekap = (id) => { sessionStorage.setItem('c1_dpd', id); nav('/rekap'); };
+  const canOpen = (id) => !isDpd || id === user.dpdId;
+  const openRekap = (id) => { if (!canOpen(id)) return; sessionStorage.setItem('c1_dpd', id); nav('/rekap'); };
+  const mine = isDpd ? ranked.find((r) => r.id === user.dpdId) : null;
   const exportCsv = () => downloadText('Peringkat_Capaian_DPD.csv', toCsv(ranked, [
     { label: 'Peringkat', value: 'rank' }, { label: 'DPD', value: 'nama' }, { label: 'Jumlah Kecamatan', value: 'K' },
     ...JENIS.map((j) => ({ label: j.label + ' (file)', value: (r) => r.per.find((p) => p.id === j.id).count })),
@@ -76,7 +81,7 @@ export default function Dashboard() {
     <>
       <section className="page-head">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div className="eyebrow">DPW PKS Sumatera Selatan · diperbarui {at ? fmtDateTime(at) : '-'}</div>
+          <div className="eyebrow">{isDpd ? user.dpdNama + ' · ' : ''}DPW PKS Sumatera Selatan · diperbarui {at ? fmtDateTime(at) : '-'}</div>
           <h1 className="page-title">Dashboard Capaian</h1>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -93,6 +98,8 @@ export default function Dashboard() {
         <div className="kpi"><span>Usulan bacaleg</span><b>{totalBacaleg}</b><small>nama diusulkan</small></div>
       </section>
 
+      {mine && <MyPosition me={mine} ranked={ranked} onOpen={() => openRekap(mine.id)} />}
+
       <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
           <h2 className="card-title">Capaian tertinggi</h2>
@@ -101,9 +108,9 @@ export default function Dashboard() {
         {top.length ? (
           <div className="podium">
             {top.map((r, i) => (
-              <button key={r.id} className={'pod' + (i === 0 ? ' first' : '')} onClick={() => openRekap(r.id)} style={{ textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit' }}>
+              <button key={r.id} className={'pod' + (i === 0 ? ' first' : '')} onClick={() => openRekap(r.id)} style={{ textAlign: 'left', cursor: canOpen(r.id) ? 'pointer' : 'default', font: 'inherit', color: 'inherit' }}>
                 <span className="pod-rank">{i === 0 && <Icon name="trophy" size={14} />}PERINGKAT {i + 1}</span>
-                <span className="pod-name">{r.nama.replace('DPD PKS ', '')}</span>
+                <span className="pod-name">{r.nama.replace('DPD PKS ', '')}{isDpd && r.id === user.dpdId && <span className="badge warn" style={{ marginLeft: 8 }}>DPD Anda</span>}</span>
                 <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                   <span className="pod-pct">{r.pct}%</span>
                   <span className="card-sub">{r.done}/{r.target} dokumen</span>
@@ -121,7 +128,7 @@ export default function Dashboard() {
         <div className="card-head">
           <div>
             <h2 className="card-title">Peringkat capaian DPD{tk ? ' · ' + tkLabel : ''}</h2>
-            <div className="card-sub hint-text">Klik baris untuk melihat rekap DPD</div>
+            <div className="card-sub hint-text">{isDpd ? 'Baris berwarna oranye adalah DPD Anda' : 'Klik baris untuk melihat rekap DPD'}</div>
           </div>
           <div className="tools"><SearchBox value={q} onChange={setQ} placeholder="Cari DPD" /></div>
         </div>
@@ -138,9 +145,9 @@ export default function Dashboard() {
               {list.map((r) => {
                 const st = status(r);
                 return (
-                  <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => openRekap(r.id)}>
+                  <tr key={r.id} className={isDpd && r.id === user.dpdId ? 'me' : undefined} style={{ cursor: canOpen(r.id) ? 'pointer' : 'default' }} onClick={() => openRekap(r.id)}>
                     <td className="num" style={{ fontWeight: r.vRank <= 3 ? 800 : 600 }}>{r.vRank}</td>
-                    <td className="strong">{r.nama.replace('DPD PKS ', '')}</td>
+                    <td className="strong">{r.nama.replace('DPD PKS ', '')}{isDpd && r.id === user.dpdId && <span className="badge warn" style={{ marginLeft: 8 }}>Anda</span>}</td>
                     <td className="muted">{r.K || '–'}</td>
                     {!tk && <td><MiniBars per={r.per} /></td>}
                     <td>
@@ -166,7 +173,7 @@ export default function Dashboard() {
         )}
       </section>
 
-      {attention.length > 0 && (
+      {!isDpd && attention.length > 0 && (
         <section className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <h2 className="card-title">Perlu ditindaklanjuti ({attention.length})</h2>
           <div className="card-sub hint-text">DPD yang belum mengisi jumlah kecamatan atau belum mengupload sama sekali.</div>
@@ -182,3 +189,65 @@ export default function Dashboard() {
     </>
   );
 }
+
+/** Kartu posisi DPD sendiri: peringkat, dibanding rata-rata provinsi, dan per tingkatan. */
+function MyPosition({ me, ranked, onOpen }) {
+  const withT = ranked.filter((r) => r.hasTarget);
+  const n = withT.length || 1;
+  const avg = Math.round(withT.reduce((s, r) => s + r.pct, 0) / n);
+  const leader = ranked[0];
+  const ahead = ranked.find((r) => r.rank === me.rank - 1);
+  const avgPer = JENIS.map((j) => Math.round(withT.reduce((s, r) => s + r.per.find((p) => p.id === j.id).pct, 0) / n));
+  const diff = me.pct - avg;
+
+  let msg;
+  if (!me.hasTarget) msg = <>Jumlah kecamatan belum diisi, jadi capaian belum bisa dihitung. Isi dulu di halaman <b>Input Data</b>.</>;
+  else if (me.rank === 1) msg = <>Alhamdulillah, DPD Anda di <b>peringkat pertama</b> se-Sumatera Selatan.</>;
+  else msg = <>Butuh <b>{Math.max(1, ahead.done - me.done + (ahead.pctExact > me.pctExact ? 1 : 0))} dokumen lagi</b> untuk menyusul {ahead.nama.replace('DPD PKS ', '')} di peringkat {ahead.rank}. Peringkat 1: {leader.nama.replace('DPD PKS ', '')} ({leader.pct}%).</>;
+
+  return (
+    <section className="card" style={{ overflow: 'hidden' }}>
+      <div className="card-head">
+        <div>
+          <h2 className="card-title">Posisi DPD Anda</h2>
+          <div className="card-sub">{me.nama}</div>
+        </div>
+        <button className="btn btn-ghost btn-sm" onClick={onOpen}>Lihat rekap saya</button>
+      </div>
+      <div className="mypos">
+        <div className="mypos-left">
+          <div className="mypos-rank"><b>#{me.rank}</b><span>dari {ranked.length} DPD</span></div>
+          <div className="mypos-stat">
+            <div><span>CAPAIAN ANDA</span><b>{me.pct}%</b></div>
+            <div><span>RATA-RATA</span><b>{avg}%</b></div>
+          </div>
+          <div style={{ fontSize: 14, lineHeight: 1.55 }}>
+            {me.hasTarget && <div style={{ fontWeight: 700, color: diff >= 0 ? 'var(--ok)' : 'var(--err)', marginBottom: 4 }}>
+              {diff >= 0 ? `▲ ${diff} poin di atas rata-rata provinsi` : `▼ ${-diff} poin di bawah rata-rata provinsi`}
+            </div>}
+            {msg}
+          </div>
+        </div>
+        <div style={{ padding: '10px 0', display: 'flex', flexDirection: 'column' }}>
+          <div className="legend" style={{ padding: '6px 20px 10px' }}>
+            <span><i style={{ background: 'var(--brand)' }} />Capaian DPD Anda</span>
+            <span><i style={{ background: 'var(--ink)', width: 3, height: 14, borderRadius: 2 }} />Rata-rata provinsi</span>
+          </div>
+          {me.per.map((p, i) => (
+            <div className="cmp-row" key={p.id} title={`${p.label}: Anda ${p.pct}%, rata-rata ${avgPer[i]}%`}>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{p.label}</span>
+              <span className="cmp-bar" role="img" aria-label={`${p.label}: Anda ${p.pct} persen, rata-rata ${avgPer[i]} persen`}>
+                <i style={{ width: p.pct + '%' }} />
+                <em style={{ left: avgPer[i] + '%' }} />
+              </span>
+              <span className="cmp-val"><b>{p.pct}%</b>rata-rata {avgPer[i]}%</span>
+            </div>
+          ))}
+          <div className="hint-text" style={{ fontSize: 13, padding: '8px 20px 4px' }}>PR {p0(me)} kecamatan lagi di semua tingkatan.</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const p0 = (me) => me.per.reduce((s, p) => s + p.pr, 0);

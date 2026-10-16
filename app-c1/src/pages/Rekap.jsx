@@ -8,7 +8,7 @@ import { downloadText, fmtDate, fmtTime, toCsv } from '../lib/format.js';
 import Icon from '../components/Icon.jsx';
 import Capaian from '../components/Capaian.jsx';
 import DpdPicker from '../components/DpdPicker.jsx';
-import { Loading, SearchBox, TableTabs } from '../components/ui.jsx';
+import { Loading, ScrollRow, SearchBox, TableTabs } from '../components/ui.jsx';
 
 const LIMIT = 15;
 
@@ -58,10 +58,10 @@ export default function Rekap() {
       {err && <div className="notice err">{err}</div>}
       {!c1 || !bacaleg ? <Loading rows={4} /> : (
         <>
-          <div className="tabs-line" role="tablist" aria-label="Kategori">
+          <ScrollRow className="tabs-line" label="Kategori">
             <button role="tab" aria-selected={cat === 'c1'} onClick={() => { setCat('c1'); setQ(''); }}>Dokumen C1 <span className="pill-count">{c1.length}</span></button>
             <button role="tab" aria-selected={cat === 'bacaleg'} onClick={() => { setCat('bacaleg'); setQ(''); }}>Usulan Bacaleg <span className="pill-count">{bacaleg.length}</span></button>
-          </div>
+          </ScrollRow>
 
           {cat === 'c1' && (
             <>
