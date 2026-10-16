@@ -40,5 +40,23 @@ export async function uploadC1(file, meta, onProgress) {
   if (file.size > MAX_FILE_MB * 1024 * 1024) throw new Error('File lebih dari ' + MAX_FILE_MB + ' MB. Perkecil dulu (kompres/scan ulang).');
   onProgress && onProgress(2);
   const base64 = isDemo ? '' : await readBase64(file);
-  return guard(adapter.upload({ ...meta, fileName: file.name, mime: file.type, size: file.size, base64 }, token, onProgress));
+  return guard(adapter.upload('uploadC1', { ...meta, fileName: file.name, mime: file.type, size: file.size, base64 }, token, onProgress));
+}
+
+/** Edit C1 dari tabel (butuh password). Kalau `file` diisi, file lama diganti dan dihapus dari Drive. */
+export async function editC1(meta, file, onProgress) {
+  if (!file) return call('editC1', meta);
+  if (file.size > MAX_FILE_MB * 1024 * 1024) throw new Error('File lebih dari ' + MAX_FILE_MB + ' MB. Perkecil dulu (kompres/scan ulang).');
+  onProgress && onProgress(2);
+  const base64 = isDemo ? '' : await readBase64(file);
+  return guard(adapter.upload('editC1', { ...meta, fileName: file.name, mime: file.type, size: file.size, base64 }, token, onProgress));
+}
+
+/** Ambil isi file C1 lewat server (tidak perlu akses Drive langsung). */
+export async function fetchFile(id) {
+  const d = await call('getFile', { id });
+  const bin = atob(d.base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return { name: d.name, blob: new Blob([bytes], { type: d.mime || 'application/octet-stream' }) };
 }

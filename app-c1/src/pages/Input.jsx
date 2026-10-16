@@ -9,7 +9,13 @@ import { dpdProgress, countsFromC1 } from '../lib/progress.js';
 import { buildWaReport } from '../lib/report.js';
 import Icon from '../components/Icon.jsx';
 import DpdPicker from '../components/DpdPicker.jsx';
-import { Loading, Modal, ProgressLine, ScrollRow, useToast } from '../components/ui.jsx';
+import { IconBtn, Loading, Modal, ProgressLine, ScrollRow, useToast } from '../components/ui.jsx';
+import { DeleteBacalegModal, DeleteC1Modal, EditBacalegModal, EditC1Modal } from '../components/EditModals.jsx';
+import { openC1File } from '../lib/files.js';
+
+// keterangan boleh dikoreksi langsung (tanpa password) selama 55 menit setelah upload oleh akun yang sama
+const FRESH_MS = 55 * 60000;
+const isFresh = (iso, ownerId, user) => ownerId === user.id && iso && Date.now() - new Date(iso).getTime() < FRESH_MS;
 
 let slotSeq = 0;
 const newSlot = () => ({ key: 's' + ++slotSeq, status: 'empty', progress: 0, keterangan: '', fileName: '', error: '' });
@@ -31,7 +37,7 @@ export default function Input() {
   const [notes, setNotes] = useState({});
   const [saving, setSaving] = useState({});
   const [drafts, setDrafts] = useState([]);
-  const [editing, setEditing] = useState(null);
+  const [modal, setModal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [report, setReport] = useState(null);
   const [settings, setSettings] = useState({});
@@ -126,14 +132,7 @@ export default function Input() {
     timers.current[id] = setTimeout(() => flushNote(id), 700);
   };
 
-  const deleteSaved = async (row) => {
-    if (!window.confirm('Hapus file "' + row.fileName + '"? File juga dihapus dari folder Drive.')) return;
-    try {
-      await call('deleteC1', { id: row.id });
-      setC1((list) => list.filter((x) => x.id !== row.id));
-      toast('File dihapus');
-    } catch (e) { toast(e.message, 'err'); }
-  };
+  const viewFile = (row) => openC1File(row, 'view').catch((e) => toast(e.message, 'err'));
 
   /* ---------- bacaleg ---------- */
   const saveBacaleg = async (b, onDone) => {
@@ -144,14 +143,6 @@ export default function Input() {
       toast('Usulan bacaleg disimpan');
     } catch (e) { toast(e.message, 'err'); }
   };
-  const deleteBacaleg = async (b) => {
-    if (!window.confirm('Hapus usulan "' + b.nama + '"?')) return;
-    try {
-      await call('deleteBacaleg', { id: b.id });
-      setBacaleg((list) => list.filter((x) => x.id !== b.id));
-    } catch (e) { toast(e.message, 'err'); }
-  };
-
   /* ---------- derived ---------- */
   const c1List = c1 || [];
   const tabMeta = JENIS.find((j) => j.id === tab);
@@ -246,7 +237,9 @@ export default function Input() {
 
             {savedHere.map((row, i) => (
               <SavedItem key={row.id} no={i + 1} row={row} label={tabMeta.label} note={notes[row.id] ?? row.keterangan ?? ''}
-                state={saving[row.id]} onNote={(v) => onNote(row.id, v)} onBlur={() => flushNote(row.id)} onDelete={() => deleteSaved(row)} />
+                fresh={isFresh(row.uploadedAt, row.userId, user)}
+                state={saving[row.id]} onNote={(v) => onNote(row.id, v)} onBlur={() => flushNote(row.id)}
+                onView={() => viewFile(row)} onEdit={() => setModal({ type: 'editC1', row })} onDelete={() => setModal({ type: 'delC1', row })} />
             ))}
             {slots[tab].map((s, i) => (
               <SlotItem key={s.key} no={savedHere.length + i + 1} slot={s} label={tabMeta.label} disabled={noUploader}
@@ -261,9 +254,7 @@ export default function Input() {
         {cat === 'bacaleg' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {bacaleg.map((b, i) => (
-              editing === b.id
-                ? <BacalegForm key={b.id} no={i + 1} value={b} onCancel={() => setEditing(null)} onSave={(v) => saveBacaleg({ ...v, id: b.id }, () => setEditing(null))} />
-                : <BacalegView key={b.id} no={i + 1} b={b} onEdit={() => setEditing(b.id)} onDelete={() => deleteBacaleg(b)} />
+              <BacalegView key={b.id} no={i + 1} b={b} onEdit={() => setModal({ type: 'editB', row: b })} onDelete={() => setModal({ type: 'delB', row: b })} />
             ))}
             {drafts.map((d, i) => (
               <BacalegForm key={d.key} no={bacaleg.length + i + 1} value={d} disabled={noUploader}
@@ -282,6 +273,28 @@ export default function Input() {
         <Link className="btn btn-ghost" to="/rekap">Lihat Rekap</Link>
         <button className="btn btn-primary" disabled={!ready || submitting} onClick={doSubmit}>{submitting ? 'Mengirim…' : 'Submit & Laporkan ke Admin'}</button>
       </div>
+
+      {modal?.type === 'editC1' && (
+        <EditC1Modal row={modal.row} onClose={() => setModal(null)}
+          onSaved={(out, replaced) => {
+            setC1((l) => l.map((x) => (x.id === out.id ? { ...x, ...out } : x)));
+            setNotes((n) => ({ ...n, [out.id]: out.keterangan }));
+            setModal(null);
+            toast(replaced ? 'File diganti, file lama dihapus dari Drive' : 'Perubahan disimpan');
+          }} />
+      )}
+      {modal?.type === 'delC1' && (
+        <DeleteC1Modal row={modal.row} onClose={() => setModal(null)}
+          onDeleted={(r) => { setC1((l) => l.filter((x) => x.id !== r.id)); setModal(null); toast('Dokumen dihapus, file dihapus dari Drive'); }} />
+      )}
+      {modal?.type === 'editB' && (
+        <EditBacalegModal row={modal.row} dpdId={dpdId} onClose={() => setModal(null)}
+          onSaved={(out) => { setBacaleg((l) => l.map((x) => (x.id === out.id ? { ...x, ...out } : x))); setModal(null); toast('Usulan diperbarui'); }} />
+      )}
+      {modal?.type === 'delB' && (
+        <DeleteBacalegModal row={modal.row} onClose={() => setModal(null)}
+          onDeleted={(r) => { setBacaleg((l) => l.filter((x) => x.id !== r.id)); setModal(null); toast('Usulan dihapus'); }} />
+      )}
 
       {report && (
         <Modal title="Data tersimpan" sub="Kirim laporan ini ke WhatsApp admin supaya bisa langsung dicek." onClose={() => setReport(null)}
@@ -308,13 +321,17 @@ function PageHead({ user, dpd }) {
   );
 }
 
-function SavedItem({ no, row, label, note, state, onNote, onBlur, onDelete }) {
+function SavedItem({ no, row, label, note, fresh, state, onNote, onBlur, onView, onEdit, onDelete }) {
   const missing = !note.trim();
   return (
     <section className={'item' + (row.justDone ? ' fade-in' : '')}>
       <div className="item-top">
         <span className="kicker">C1 {label} · #{no}</span>
-        <button className="btn-icon" aria-label="Hapus file" onClick={onDelete}><Icon name="trash" /></button>
+        <span className="acts">
+          <IconBtn icon="eye" tone="view" label={'Lihat ' + row.fileName} onClick={onView} />
+          <IconBtn icon="edit" label="Edit / ganti file" onClick={onEdit} />
+          <IconBtn icon="trash" tone="danger" label="Hapus dokumen" onClick={onDelete} />
+        </span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div className="file-row">
@@ -323,17 +340,27 @@ function SavedItem({ no, row, label, note, state, onNote, onBlur, onDelete }) {
             <div className="file-name">{row.fileName}</div>
             <div className="file-sub"><span className="ok-text">✓ Selesai</span> · {row.uploader} · {fmtDateTime(row.uploadedAt)}{row.size ? ' · ' + fmtSize(row.size) : ''}</div>
           </div>
-          {row.fileUrl && <a className="btn btn-ghost btn-sm" href={row.fileUrl} target="_blank" rel="noopener noreferrer">Buka</a>}
         </div>
         <ProgressLine pct={100} done thin />
       </div>
-      <div className="field">
-        <label className="label" htmlFor={'k' + row.id}>Keterangan <span className="req">*</span></label>
-        <input id={'k' + row.id} className={'input' + (missing ? ' invalid' : '')} value={note} onChange={(e) => onNote(e.target.value)} onBlur={onBlur} placeholder="Contoh: C1 TPS 012 Kel. Ilir Barat, Kec. Bukit Kecil" />
-        <div className={'help' + (missing ? ' err' : '')}>
-          {missing ? 'Wajib diisi karena ada file.' : state === 'saving' ? 'Menyimpan…' : state === 'saved' ? 'Tersimpan' : state === 'error' ? 'Gagal menyimpan, coba ketik ulang' : ' '}
+      {fresh ? (
+        <div className="field">
+          <label className="label" htmlFor={'k' + row.id}>Keterangan <span className="req">*</span></label>
+          <input id={'k' + row.id} className={'input' + (missing ? ' invalid' : '')} value={note} onChange={(e) => onNote(e.target.value)} onBlur={onBlur} placeholder="Contoh: C1 TPS 012 Kel. Ilir Barat, Kec. Bukit Kecil" />
+          <div className={'help' + (missing ? ' err' : '')}>
+            {missing ? 'Wajib diisi karena ada file.' : state === 'saving' ? 'Menyimpan…' : state === 'saved' ? 'Tersimpan' : state === 'error' ? 'Gagal menyimpan, coba ketik ulang' : 'Bisa langsung dikoreksi selama 1 jam setelah upload.'}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="field">
+          <span className="label">Keterangan <span className="req">*</span></span>
+          <div className="ket-ro">
+            <span style={{ fontWeight: 600 }}>{note || <span className="help err">Belum diisi</span>}</span>
+            <button className="btn btn-ghost btn-sm" onClick={onEdit}><Icon name="edit" size={16} /> Ubah</button>
+          </div>
+          <div className="help">Perubahan data lama perlu konfirmasi password dan tercatat di riwayat.</div>
+        </div>
+      )}
     </section>
   );
 }
@@ -390,10 +417,10 @@ function BacalegView({ no, b, onEdit, onDelete }) {
     <section className="item">
       <div className="item-top">
         <span className="kicker">Usulan Bacaleg · #{no}</span>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button className="btn-icon" aria-label="Ubah usulan" onClick={onEdit}><Icon name="edit" /></button>
-          <button className="btn-icon" aria-label="Hapus usulan" onClick={onDelete}><Icon name="trash" /></button>
-        </div>
+        <span className="acts">
+          <IconBtn icon="edit" label="Edit usulan" onClick={onEdit} />
+          <IconBtn icon="trash" tone="danger" label="Hapus usulan" onClick={onDelete} />
+        </span>
       </div>
       <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
         <div style={{ fontSize: 16, fontWeight: 700 }}>{b.nama}</div>

@@ -19,7 +19,7 @@ export function createRemote(url) {
     return json.data;
   }
 
-  function upload(payload, token, onProgress) {
+  function upload(action, payload, token, onProgress) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', url);
@@ -38,7 +38,7 @@ export function createRemote(url) {
         }
       };
       xhr.onerror = () => reject(new Error('Upload terputus. Periksa koneksi lalu coba lagi.'));
-      xhr.send(JSON.stringify({ action: 'uploadC1', token, ...payload }));
+      xhr.send(JSON.stringify({ action, token, ...payload }));
     });
   }
 

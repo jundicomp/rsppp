@@ -164,3 +164,60 @@ export function TableTabs({ tabs, value, onChange, label = 'Kelompok' }) {
     </ScrollRow>
   );
 }
+
+/** Tombol ikon kecil untuk kolom aksi tabel (tooltip + label aksesibel). */
+export function IconBtn({ icon, label, onClick, tone, disabled }) {
+  return (
+    <button type="button" className={'icon-act' + (tone ? ' ' + tone : '')} title={label} aria-label={label} onClick={onClick} disabled={disabled}>
+      <Icon name={icon} size={18} />
+    </button>
+  );
+}
+
+/**
+ * Modal konfirmasi dengan password. Isi form tambahan lewat children.
+ * onConfirm(password, alasan) harus mengembalikan Promise; error ditampilkan di modal.
+ */
+export function PasswordConfirm({ title, sub, danger, confirmLabel = 'Simpan', onConfirm, onClose, children, canSubmit = true, progress }) {
+  const [pw, setPw] = useState('');
+  const [alasan, setAlasan] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const submit = async (e) => {
+    e && e.preventDefault();
+    if (!pw || busy || !canSubmit) return;
+    setBusy(true); setErr('');
+    try {
+      await onConfirm(pw, alasan.trim());
+    } catch (e2) {
+      setErr(e2.message);
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal title={title} sub={sub} onClose={() => !busy && onClose()}
+      footer={<>
+        <button className="btn btn-ghost" onClick={onClose} disabled={busy}>Batal</button>
+        <button className={'btn ' + (danger ? 'btn-danger-solid' : 'btn-primary')} onClick={submit} disabled={!pw || busy || !canSubmit}>
+          {busy ? 'Memproses…' : confirmLabel}
+        </button>
+      </>}>
+      <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {children}
+        <div className="field">
+          <label className="label" htmlFor="pc-alasan">Alasan perubahan <span style={{ fontWeight: 500 }}>(opsional)</span></label>
+          <input id="pc-alasan" className="input" value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder="Contoh: salah pilih tingkatan, foto buram, file dobel" />
+          <div className="help">Tercatat di Riwayat Perubahan.</div>
+        </div>
+        <div className="field pc-pass">
+          <label className="label" htmlFor="pc-pass"><Icon name="lock" size={16} style={{ verticalAlign: '-3px', marginRight: 6 }} />Konfirmasi dengan password Anda <span className="req">*</span></label>
+          <input id="pc-pass" className="input" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} autoFocus />
+          <div className="help">Password akun yang sedang login.</div>
+        </div>
+        {progress > 0 && <ProgressLine pct={progress} />}
+        {err && <div className="notice err" role="alert">{err}</div>}
+        <button type="submit" hidden />
+      </form>
+    </Modal>
+  );
+}
