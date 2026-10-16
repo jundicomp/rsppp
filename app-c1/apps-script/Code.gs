@@ -11,6 +11,7 @@
 // ====== KONFIGURASI ======
 var SESSION_DAYS = 7;            // lama login berlaku
 var MAX_FILE_MB = 35;            // batas aman payload Apps Script (base64 menambah ~33%)
+var FRESH_MINUTES = 60;          // keterangan boleh dikoreksi tanpa password selama 60 menit setelah upload oleh orang yang sama
 var JENIS = ['dprri', 'prov', 'kab', 'dpd', 'pilpres'];
 var JENIS_LABEL = { dprri: 'DPR RI', prov: 'DPRD Provinsi', kab: 'DPRD Kab/Kota', dpd: 'DPD RI', pilpres: 'Pilpres' };
 var TINGKAT = ['DPR RI', 'DPRD Provinsi', 'DPRD Kab/Kota', 'DPD RI'];
@@ -20,8 +21,9 @@ var SHEETS = {
   Users: ['id', 'username', 'nama', 'role', 'dpdId', 'passHash', 'salt', 'aktif', 'createdAt', 'lastLogin'],
   Sessions: ['token', 'userId', 'expires'],
   DPD: ['id', 'nama', 'jumlahKecamatan', 'updatedAt'],
-  C1: ['id', 'dpdId', 'jenis', 'keterangan', 'fileName', 'fileId', 'fileUrl', 'mime', 'size', 'uploader', 'uploadedAt', 'userId'],
-  Bacaleg: ['id', 'dpdId', 'nama', 'tingkat', 'profil', 'pengusul', 'pencatat', 'createdAt', 'userId'],
+  C1: ['id', 'dpdId', 'jenis', 'keterangan', 'fileName', 'fileId', 'fileUrl', 'mime', 'size', 'uploader', 'uploadedAt', 'userId', 'updatedAt', 'updatedBy'],
+  Bacaleg: ['id', 'dpdId', 'nama', 'tingkat', 'profil', 'pengusul', 'pencatat', 'createdAt', 'userId', 'updatedAt', 'updatedBy'],
+  Log: ['id', 'waktu', 'userId', 'username', 'dpdId', 'aksi', 'objek', 'objekId', 'detail', 'alasan'],
   Submissions: ['id', 'dpdId', 'userId', 'uploader', 'submittedAt', 'totalC1', 'totalBacaleg'],
   Settings: ['key', 'value']
 };
@@ -43,6 +45,16 @@ function setup() {
       sh.appendRow(SHEETS[name]);
       sh.setFrozenRows(1);
       sh.getRange(1, 1, 1, SHEETS[name].length).setFontWeight('bold');
+    } else {
+      // migrasi: tambahkan kolom baru di ujung kanan kalau belum ada (data lama aman)
+      var head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+      SHEETS[name].forEach(function (col) {
+        if (head.indexOf(col) < 0) {
+          var c = sh.getLastColumn() + 1;
+          sh.getRange(1, c).setValue(col).setFontWeight('bold');
+          head.push(col);
+        }
+      });
     }
   });
   if (rows_('DPD').length === 0) {
@@ -106,7 +118,12 @@ var HANDLERS = {
   listC1: { roles: ALL, fn: function (r, u) { return rows_('C1').filter(scopeFilter_(r, u)); } },
   uploadC1: { roles: ['dpd', 'superadmin'], fn: uploadC1_ },
   updateC1: { roles: ['dpd', 'superadmin'], fn: updateC1_ },
+  editC1: { roles: ['dpd', 'superadmin'], fn: editC1_ },
   deleteC1: { roles: ['dpd', 'superadmin'], fn: deleteC1_ },
+  getFile: { roles: ALL, fn: getFile_ },
+  listLog: { roles: ALL, fn: function (r, u) {
+    return rows_('Log').filter(scopeFilter_(r, u)).sort(function (a, b) { return String(b.waktu).localeCompare(String(a.waktu)); });
+  } },
 
   listBacaleg: { roles: ALL, fn: function (r, u) { return rows_('Bacaleg').filter(scopeFilter_(r, u)); } },
   saveBacaleg: { roles: ['dpd', 'superadmin'], fn: saveBacaleg_ },
@@ -262,23 +279,101 @@ function uploadC1_(r, u) {
   var row = { id: 'c' + Date.now().toString(36) + Math.floor(Math.random() * 1e4), dpdId: dpdId, jenis: r.jenis,
     keterangan: String(r.keterangan || '').trim(), fileName: safe, fileId: file.getId(), fileUrl: file.getUrl(),
     mime: r.mime || '', size: bytes.length, uploader: String(r.uploader).trim(), uploadedAt: now_(), userId: u.id };
-  withLock_(function () { append_('C1', row); });
+  withLock_(function () {
+    append_('C1', row);
+    log_(u, dpdId, 'UPLOAD', 'C1', row.id, 'C1 ' + JENIS_LABEL[r.jenis] + ' · ' + safe + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
+  });
   return row;
 }
 
-function updateC1_(r, u) {
-  var row = rows_('C1').filter(function (x) { return x.id === r.id; })[0];
+function c1Row_(id, u) {
+  var row = rows_('C1').filter(function (x) { return x.id === id; })[0];
   if (!row || (u.role === 'dpd' && row.dpdId !== u.dpdId)) throw new Error('Data tidak ditemukan');
-  update_('C1', r.id, { keterangan: String(r.keterangan || '').trim() });
+  return row;
+}
+
+function isFresh_(createdIso, ownerId, u) {
+  return ownerId === u.id && createdIso && (Date.now() - new Date(createdIso).getTime()) < FRESH_MINUTES * 60000;
+}
+
+function verifyPass_(u, password) {
+  if (!password || hash_(String(password), u.salt) !== u.passHash) throw new Error('Password salah. Perubahan dibatalkan.');
+}
+
+// Koreksi cepat keterangan dari halaman Input. Tanpa password hanya untuk upload sendiri < 60 menit.
+function updateC1_(r, u) {
+  var row = c1Row_(r.id, u);
+  if (!isFresh_(row.uploadedAt, row.userId, u)) verifyPass_(u, r.password);
+  var ket = String(r.keterangan || '').trim();
+  if (ket === String(row.keterangan)) return true;
+  withLock_(function () {
+    update_('C1', r.id, { keterangan: ket, updatedAt: now_(), updatedBy: u.username });
+    log_(u, row.dpdId, 'EDIT', 'C1', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JENIS_LABEL[row.jenis] + ', ' + row.fileName + ')', r.alasan);
+  });
   return true;
 }
 
+// Edit dari tabel: keterangan, jenis, dan/atau ganti file. Selalu butuh password.
+function editC1_(r, u) {
+  verifyPass_(u, r.password);
+  var row = c1Row_(r.id, u);
+  var jenis = r.jenis || row.jenis;
+  if (JENIS.indexOf(jenis) < 0) throw new Error('Jenis C1 tidak valid');
+  var ket = r.keterangan !== undefined ? String(r.keterangan).trim() : String(row.keterangan);
+  if (!ket) throw new Error('Keterangan wajib diisi');
+  var patch = { keterangan: ket, jenis: jenis, updatedAt: now_(), updatedBy: u.username };
+  var notes = [];
+  if (ket !== String(row.keterangan)) notes.push('Keterangan: "' + row.keterangan + '" → "' + ket + '"');
+  if (jenis !== row.jenis) notes.push('Jenis: ' + JENIS_LABEL[row.jenis] + ' → ' + JENIS_LABEL[jenis]);
+  var aksi = 'EDIT';
+  if (r.base64) {
+    var bytes = Utilities.base64Decode(r.base64);
+    if (bytes.length > MAX_FILE_MB * 1024 * 1024) throw new Error('File terlalu besar (maks ' + MAX_FILE_MB + ' MB)');
+    var safe = String(r.fileName || 'file').replace(/[\\/:*?"<>|]/g, '_');
+    var file = jenisFolder_(row.dpdId, jenis).createFile(Utilities.newBlob(bytes, r.mime || 'application/octet-stream', safe));
+    trashFile_(row.fileId);
+    patch.fileName = safe; patch.fileId = file.getId(); patch.fileUrl = file.getUrl();
+    patch.mime = r.mime || ''; patch.size = bytes.length;
+    notes.push('File diganti: ' + row.fileName + ' → ' + safe + ' (file lama dihapus dari Drive)');
+    aksi = 'GANTI_FILE';
+  } else if (jenis !== row.jenis && row.fileId) {
+    try { DriveApp.getFileById(row.fileId).moveTo(jenisFolder_(row.dpdId, jenis)); } catch (e) {}
+  }
+  if (!notes.length) return row;
+  withLock_(function () {
+    update_('C1', row.id, patch);
+    log_(u, row.dpdId, aksi, 'C1', row.id, notes.join('; '), r.alasan);
+  });
+  return Object.assign(row, patch);
+}
+
 function deleteC1_(r, u) {
-  var row = rows_('C1').filter(function (x) { return x.id === r.id; })[0];
-  if (!row || (u.role === 'dpd' && row.dpdId !== u.dpdId)) throw new Error('Data tidak ditemukan');
-  try { DriveApp.getFileById(row.fileId).setTrashed(true); } catch (e) {}
-  withLock_(function () { deleteWhere_('C1', 'id', r.id); });
+  verifyPass_(u, r.password);
+  var row = c1Row_(r.id, u);
+  trashFile_(row.fileId);
+  withLock_(function () {
+    deleteWhere_('C1', 'id', r.id);
+    log_(u, row.dpdId, 'HAPUS', 'C1', row.id, 'C1 ' + JENIS_LABEL[row.jenis] + ' "' + row.keterangan + '" · ' + row.fileName + ' (diupload ' + row.uploader + ') dihapus, file dihapus dari Drive', r.alasan);
+  });
   return true;
+}
+
+function trashFile_(fileId) {
+  if (!fileId) return;
+  try { DriveApp.getFileById(fileId).setTrashed(true); } catch (e) { /* file sudah tidak ada */ }
+}
+
+function getFile_(r, u) {
+  var row = c1Row_(r.id, u);
+  if (!row.fileId) throw new Error('File tidak tersedia');
+  var blob = DriveApp.getFileById(row.fileId).getBlob();
+  return { name: row.fileName, mime: blob.getContentType() || row.mime, base64: Utilities.base64Encode(blob.getBytes()) };
+}
+
+function log_(u, dpdId, aksi, objek, objekId, detail, alasan) {
+  append_('Log', { id: 'l' + Date.now().toString(36) + Math.floor(Math.random() * 1e4), waktu: now_(), userId: u.id,
+    username: u.username + (u.nama ? ' (' + u.nama + ')' : ''), dpdId: dpdId || '', aksi: aksi, objek: objek,
+    objekId: objekId || '', detail: detail || '', alasan: String(alasan || '').trim() });
 }
 
 function rootFolder_() {
@@ -306,25 +401,40 @@ function saveBacaleg_(r, u) {
     if (!String(b[f] || '').trim()) throw new Error('Field ' + f + ' wajib diisi');
   });
   if (TINGKAT.indexOf(b.tingkat) < 0) throw new Error('Tingkat caleg tidak valid');
+  if (b.id) {
+    var old = rows_('Bacaleg').filter(function (x) { return x.id === b.id; })[0];
+    if (!old || (u.role === 'dpd' && old.dpdId !== u.dpdId)) throw new Error('Data tidak ditemukan');
+    if (!isFresh_(old.createdAt, old.userId, u)) verifyPass_(u, r.password);
+    var labels = { nama: 'Nama', tingkat: 'Tingkat', profil: 'Profil', pengusul: 'Pengusul' };
+    var notes = [];
+    Object.keys(labels).forEach(function (k) {
+      if (String(old[k]).trim() !== String(b[k]).trim()) notes.push(labels[k] + ': "' + old[k] + '" → "' + String(b[k]).trim() + '"');
+    });
+    return withLock_(function () {
+      var patch = { nama: b.nama.trim(), tingkat: b.tingkat, profil: b.profil.trim(), pengusul: b.pengusul.trim(), updatedAt: now_(), updatedBy: u.username };
+      update_('Bacaleg', b.id, patch);
+      if (notes.length) log_(u, old.dpdId, 'EDIT', 'Bacaleg', b.id, notes.join('; '), r.alasan);
+      return Object.assign(old, patch);
+    });
+  }
   return withLock_(function () {
-    if (b.id) {
-      var old = rows_('Bacaleg').filter(function (x) { return x.id === b.id; })[0];
-      if (!old || (u.role === 'dpd' && old.dpdId !== u.dpdId)) throw new Error('Data tidak ditemukan');
-      update_('Bacaleg', b.id, { nama: b.nama, tingkat: b.tingkat, profil: b.profil, pengusul: b.pengusul });
-      return Object.assign(old, b);
-    }
     var row = { id: 'b' + Date.now().toString(36) + Math.floor(Math.random() * 1e4), dpdId: dpdId, nama: b.nama.trim(),
       tingkat: b.tingkat, profil: b.profil.trim(), pengusul: b.pengusul.trim(), pencatat: String(r.uploader || u.nama),
       createdAt: now_(), userId: u.id };
     append_('Bacaleg', row);
+    log_(u, dpdId, 'TAMBAH', 'Bacaleg', row.id, row.nama + ' · ' + row.tingkat + ' · usul: ' + row.pengusul, '');
     return row;
   });
 }
 
 function deleteBacaleg_(r, u) {
+  verifyPass_(u, r.password);
   var row = rows_('Bacaleg').filter(function (x) { return x.id === r.id; })[0];
   if (!row || (u.role === 'dpd' && row.dpdId !== u.dpdId)) throw new Error('Data tidak ditemukan');
-  withLock_(function () { deleteWhere_('Bacaleg', 'id', r.id); });
+  withLock_(function () {
+    deleteWhere_('Bacaleg', 'id', r.id);
+    log_(u, row.dpdId, 'HAPUS', 'Bacaleg', row.id, row.nama + ' · ' + row.tingkat + ' · usul: ' + row.pengusul, r.alasan);
+  });
   return true;
 }
 
@@ -337,7 +447,10 @@ function submit_(r, u) {
   var bc = rows_('Bacaleg').filter(function (x) { return x.dpdId === dpdId; });
   var row = { id: 's' + Date.now().toString(36), dpdId: dpdId, userId: u.id, uploader: r.uploader || u.nama,
     submittedAt: now_(), totalC1: c1.length, totalBacaleg: bc.length };
-  withLock_(function () { append_('Submissions', row); });
+  withLock_(function () {
+    append_('Submissions', row);
+    log_(u, dpdId, 'SUBMIT', 'Laporan', row.id, c1.length + ' file C1, ' + bc.length + ' usulan bacaleg dilaporkan ke admin', '');
+  });
   return row;
 }
 
@@ -401,8 +514,14 @@ function rows_(name) {
   });
 }
 
+function header_(name) {
+  var sh = sheet_(name);
+  var n = sh.getLastColumn();
+  return n ? sh.getRange(1, 1, 1, n).getValues()[0].map(String) : SHEETS[name];
+}
+
 function append_(name, obj) {
-  var head = SHEETS[name];
+  var head = header_(name);
   sheet_(name).appendRow(head.map(function (h) { return obj[h] === undefined ? '' : obj[h]; }));
 }
 
@@ -410,10 +529,10 @@ function update_(name, id, patch) { return updateBy_(name, 'id', id, patch); }
 
 function updateBy_(name, keyCol, keyVal, patch) {
   var sh = sheet_(name);
-  var head = SHEETS[name];
+  var head = header_(name);
   var col = head.indexOf(keyCol) + 1;
   var last = sh.getLastRow();
-  if (last < 2) return false;
+  if (last < 2 || col < 1) return false;
   var keys = sh.getRange(2, col, last - 1, 1).getValues();
   for (var i = 0; i < keys.length; i++) {
     if (String(keys[i][0]) === String(keyVal)) {
@@ -429,9 +548,9 @@ function updateBy_(name, keyCol, keyVal, patch) {
 
 function deleteWhere_(name, keyCol, keyVal) {
   var sh = sheet_(name);
-  var col = SHEETS[name].indexOf(keyCol) + 1;
+  var col = header_(name).indexOf(keyCol) + 1;
   var last = sh.getLastRow();
-  if (last < 2) return;
+  if (last < 2 || col < 1) return;
   var keys = sh.getRange(2, col, last - 1, 1).getValues();
   for (var i = keys.length - 1; i >= 0; i--) {
     if (String(keys[i][0]) === String(keyVal)) sh.deleteRow(i + 2);

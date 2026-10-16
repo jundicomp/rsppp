@@ -2,7 +2,7 @@
 // Aktif otomatis kalau VITE_API_URL kosong. Berguna untuk mencoba tampilan sebelum Google Sheet siap.
 import { JENIS, TINGKAT } from '../lib/constants.js';
 
-const KEY = 'c1pemilu_demo_v1';
+const KEY = 'c1pemilu_demo_v2';
 const DPD_NAMES = [
   'Kota Palembang', 'Kota Prabumulih', 'Kota Pagar Alam', 'Kota Lubuklinggau',
   'Kab. Banyuasin', 'Kab. Empat Lawang', 'Kab. Lahat', 'Kab. Muara Enim',
@@ -49,7 +49,17 @@ function seed() {
     { dpdId: 'dpd01', nama: 'dr. Nurul Hidayah', tingkat: 'DPRD Provinsi', profil: 'Dokter puskesmas, pengurus bidang perempuan, pembina posyandu.', pengusul: 'Bidang Perempuan DPD' },
     { dpdId: 'dpd05', nama: 'Ir. Bambang Sutrisno', tingkat: 'DPR RI', profil: 'Mantan anggota DPRD dua periode, latar belakang teknik sipil.', pengusul: 'Rekomendasi Ketua DPD' }
   ].map((b) => ({ ...b, id: uid('b'), pencatat: 'Ahmad Fauzi', createdAt: new Date(now - 864e5).toISOString(), userId: '' }));
-  return { dpd, users, c1, bacaleg, submissions: [], sessions: {},
+  const opOf = (dpdId) => users.find((u) => u.dpdId === dpdId) || users[0];
+  const JLs = Object.fromEntries(JENIS.map((j) => [j.id, j.label]));
+  const log = c1.map((x) => ({ id: uid('l'), waktu: x.uploadedAt, userId: opOf(x.dpdId).id, username: opOf(x.dpdId).username + ' (' + x.uploader + ')',
+    dpdId: x.dpdId, aksi: 'UPLOAD', objek: 'C1', objekId: x.id, detail: 'C1 ' + JLs[x.jenis] + ' · ' + x.fileName + ' · "' + x.keterangan + '"', alasan: '' }));
+  const t = (h) => new Date(now - h * 3600e3).toISOString();
+  log.push(
+    { id: uid('l'), waktu: t(5), userId: 'u3', username: 'dpd.palembang (Operator Kota Palembang)', dpdId: 'dpd01', aksi: 'GANTI_FILE', objek: 'C1', objekId: '', detail: 'File diganti: C1_DPR-RI_Kec2_buram.jpg → C1_DPR-RI_Kec2.pdf (file lama dihapus dari Drive)', alasan: 'Foto sebelumnya buram' },
+    { id: uid('l'), waktu: t(3), userId: 'u3', username: 'dpd.palembang (Operator Kota Palembang)', dpdId: 'dpd01', aksi: 'EDIT', objek: 'C1', objekId: '', detail: 'Jenis: DPR RI → DPRD Provinsi; Keterangan: "C1 Kec 3" → "C1 Kecamatan 3"', alasan: 'Salah pilih tingkatan' },
+    { id: uid('l'), waktu: t(2), userId: 'u3', username: 'dpd.palembang (Operator Kota Palembang)', dpdId: 'dpd01', aksi: 'HAPUS', objek: 'C1', objekId: '', detail: 'C1 Pilpres "C1 Kecamatan 2" · C1_Pilpres_Kec2_dobel.pdf (diupload Siti Rahmawati) dihapus, file dihapus dari Drive', alasan: 'File dobel' }
+  );
+  return { dpd, users, c1, bacaleg, submissions: [], sessions: {}, log,
     settings: { waAdmin: '', namaAdmin: 'Admin RSPP DPW PKS Sumsel', appUrl: '' } };
 }
 
@@ -70,6 +80,29 @@ const pub = (db, u) => {
   return { ...rest, dpdNama: d ? d.nama : '' };
 };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const JL = Object.fromEntries(JENIS.map((j) => [j.id, j.label]));
+const FRESH_MIN = 60;
+const isFresh = (iso, owner, u) => owner === u.id && iso && Date.now() - new Date(iso).getTime() < FRESH_MIN * 60000;
+const verify = (u, pw) => { if (!pw || pw !== u.password) throw new Error('Password salah. Perubahan dibatalkan.'); };
+function addLog(db, u, dpdId, aksi, objek, objekId, detail, alasan) {
+  if (!db.log) db.log = [];
+  db.log.push({ id: uid('l'), waktu: new Date().toISOString(), userId: u.id, username: u.username + (u.nama ? ' (' + u.nama + ')' : ''),
+    dpdId: dpdId || '', aksi, objek, objekId: objekId || '', detail: detail || '', alasan: String(alasan || '').trim() });
+}
+// PDF kecil yang valid, dipakai sebagai isi file di mode demo
+function demoPdf(title) {
+  const t = String(title).replace(/[()\\]/g, '');
+  const stream = 'BT /F1 18 Tf 60 760 Td (Mode demo - file contoh) Tj 0 -30 Td /F1 12 Tf (' + t + ') Tj ET';
+  const objs = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    '<< /Length ' + stream.length + ' >>\nstream\n' + stream + '\nendstream', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+  let out = '%PDF-1.4\n'; const offs = [];
+  objs.forEach((o, i) => { offs.push(out.length); out += (i + 1) + ' 0 obj\n' + o + '\nendobj\n'; });
+  const x = out.length;
+  out += 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n' + offs.map((o) => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+  out += 'trailer\n<< /Size ' + (objs.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + x + '\n%%EOF';
+  return btoa(out);
+}
 const ALL = ['superadmin', 'admin', 'dpd'];
 
 export function createDemo() {
@@ -100,13 +133,47 @@ export function createDemo() {
     updateC1: [['superadmin', 'dpd'], (db, r, u) => {
       const row = db.c1.find((x) => x.id === r.id);
       if (!own(u, row)) throw new Error('Data tidak ditemukan');
-      row.keterangan = String(r.keterangan || '').trim(); return true;
+      if (!isFresh(row.uploadedAt, row.userId, u)) verify(u, r.password);
+      const ket = String(r.keterangan || '').trim();
+      if (ket === row.keterangan) return true;
+      addLog(db, u, row.dpdId, 'EDIT', 'C1', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JL[row.jenis] + ', ' + row.fileName + ')', r.alasan);
+      Object.assign(row, { keterangan: ket, updatedAt: new Date().toISOString(), updatedBy: u.username });
+      return true;
     }],
-    deleteC1: [['superadmin', 'dpd'], (db, r, u) => {
+    editC1: [['superadmin', 'dpd'], (db, r, u) => {
+      verify(u, r.password);
       const row = db.c1.find((x) => x.id === r.id);
       if (!own(u, row)) throw new Error('Data tidak ditemukan');
+      const jenis = r.jenis || row.jenis;
+      const ket = r.keterangan !== undefined ? String(r.keterangan).trim() : row.keterangan;
+      if (!ket) throw new Error('Keterangan wajib diisi');
+      const notes = [];
+      if (ket !== row.keterangan) notes.push('Keterangan: "' + row.keterangan + '" → "' + ket + '"');
+      if (jenis !== row.jenis) notes.push('Jenis: ' + JL[row.jenis] + ' → ' + JL[jenis]);
+      let aksi = 'EDIT';
+      const patch = { keterangan: ket, jenis, updatedAt: new Date().toISOString(), updatedBy: u.username };
+      if (r.fileName) {
+        notes.push('File diganti: ' + row.fileName + ' → ' + r.fileName + ' (file lama dihapus dari Drive)');
+        Object.assign(patch, { fileName: r.fileName, mime: r.mime, size: r.size || 0 });
+        aksi = 'GANTI_FILE';
+      }
+      if (!notes.length) return row;
+      addLog(db, u, row.dpdId, aksi, 'C1', row.id, notes.join('; '), r.alasan);
+      return Object.assign(row, patch);
+    }],
+    deleteC1: [['superadmin', 'dpd'], (db, r, u) => {
+      verify(u, r.password);
+      const row = db.c1.find((x) => x.id === r.id);
+      if (!own(u, row)) throw new Error('Data tidak ditemukan');
+      addLog(db, u, row.dpdId, 'HAPUS', 'C1', row.id, 'C1 ' + JL[row.jenis] + ' "' + row.keterangan + '" · ' + row.fileName + ' (diupload ' + row.uploader + ') dihapus, file dihapus dari Drive', r.alasan);
       db.c1 = db.c1.filter((x) => x.id !== r.id); return true;
     }],
+    getFile: [ALL, (db, r, u) => {
+      const row = db.c1.find((x) => x.id === r.id);
+      if (!own(u, row)) throw new Error('Data tidak ditemukan');
+      return { name: row.fileName.replace(/\.[a-z0-9]+$/i, '') + '.pdf', mime: 'application/pdf', base64: demoPdf(JL[row.jenis] + ' - ' + row.keterangan + ' - ' + row.fileName) };
+    }],
+    listLog: [ALL, (db, r, u) => (db.log || []).filter(scope(u, r.dpdId)).sort((a, b) => b.waktu.localeCompare(a.waktu))],
     listBacaleg: [ALL, (db, r, u) => db.bacaleg.filter(scope(u, r.dpdId))],
     saveBacaleg: [['superadmin', 'dpd'], (db, r, u) => {
       const b = r.bacaleg || {};
@@ -115,16 +182,24 @@ export function createDemo() {
       if (b.id) {
         const old = db.bacaleg.find((x) => x.id === b.id);
         if (!own(u, old)) throw new Error('Data tidak ditemukan');
-        Object.assign(old, { nama: b.nama, tingkat: b.tingkat, profil: b.profil, pengusul: b.pengusul });
+        if (!isFresh(old.createdAt, old.userId, u)) verify(u, r.password);
+        const L = { nama: 'Nama', tingkat: 'Tingkat', profil: 'Profil', pengusul: 'Pengusul' };
+        const notes = Object.keys(L).filter((k) => String(old[k]).trim() !== String(b[k]).trim()).map((k) => L[k] + ': "' + old[k] + '" → "' + String(b[k]).trim() + '"');
+        if (notes.length) addLog(db, u, old.dpdId, 'EDIT', 'Bacaleg', old.id, notes.join('; '), r.alasan);
+        Object.assign(old, { nama: b.nama.trim(), tingkat: b.tingkat, profil: b.profil.trim(), pengusul: b.pengusul.trim(), updatedAt: new Date().toISOString(), updatedBy: u.username });
         return old;
       }
       const row = { id: uid('b'), dpdId: target(u, r.dpdId), nama: b.nama.trim(), tingkat: b.tingkat, profil: b.profil.trim(),
         pengusul: b.pengusul.trim(), pencatat: r.uploader || u.nama, createdAt: new Date().toISOString(), userId: u.id };
-      db.bacaleg.push(row); return row;
+      db.bacaleg.push(row);
+      addLog(db, u, row.dpdId, 'TAMBAH', 'Bacaleg', row.id, row.nama + ' · ' + row.tingkat + ' · usul: ' + row.pengusul, '');
+      return row;
     }],
     deleteBacaleg: [['superadmin', 'dpd'], (db, r, u) => {
+      verify(u, r.password);
       const row = db.bacaleg.find((x) => x.id === r.id);
       if (!own(u, row)) throw new Error('Data tidak ditemukan');
+      addLog(db, u, row.dpdId, 'HAPUS', 'Bacaleg', row.id, row.nama + ' · ' + row.tingkat + ' · usul: ' + row.pengusul, r.alasan);
       db.bacaleg = db.bacaleg.filter((x) => x.id !== r.id); return true;
     }],
     submit: [['superadmin', 'dpd'], (db, r, u) => {
@@ -134,7 +209,9 @@ export function createDemo() {
       if (missing) throw new Error(missing + ' dokumen C1 belum ada keterangannya');
       const row = { id: uid('s'), dpdId, userId: u.id, uploader: r.uploader || u.nama, submittedAt: new Date().toISOString(),
         totalC1: c1.length, totalBacaleg: db.bacaleg.filter((x) => x.dpdId === dpdId).length };
-      db.submissions.push(row); return row;
+      db.submissions.push(row);
+      addLog(db, u, dpdId, 'SUBMIT', 'Laporan', row.id, row.totalC1 + ' file C1, ' + row.totalBacaleg + ' usulan bacaleg dilaporkan ke admin', '');
+      return row;
     }],
     dashboard: [ALL, (db, r, u) => {
       const dpds = db.dpd;
@@ -206,10 +283,15 @@ export function createDemo() {
     return JSON.parse(JSON.stringify(out));
   }
 
-  async function upload(payload, token, onProgress) {
+  async function upload(action, payload, token, onProgress) {
     for (let p = 5; p < 95; p += 7 + Math.floor(Math.random() * 10)) {
       onProgress && onProgress(p);
       await wait(120);
+    }
+    if (action === 'editC1') {
+      const out = await call('editC1', payload, token);
+      onProgress && onProgress(100);
+      return out;
     }
     const db = load();
     const u = db.users.find((x) => x.id === db.sessions[token]);
@@ -220,6 +302,7 @@ export function createDemo() {
       fileName: payload.fileName, fileId: '', fileUrl: '', mime: payload.mime, size: payload.size || 0,
       uploader: payload.uploader.trim(), uploadedAt: new Date().toISOString(), userId: u.id };
     db.c1.push(row);
+    addLog(db, u, row.dpdId, 'UPLOAD', 'C1', row.id, 'C1 ' + JL[row.jenis] + ' · ' + row.fileName + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
     save(db);
     onProgress && onProgress(100);
     return row;

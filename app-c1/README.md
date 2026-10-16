@@ -110,6 +110,18 @@ Untuk mencoba di komputer sendiri: `npm run dev` di dalam folder `app-c1`.
 
 ---
 
+## Edit, hapus, dan riwayat perubahan
+
+- **Konfirmasi password.** Setiap edit, ganti file, dan hapus (C1 maupun bacaleg) wajib dikonfirmasi dengan password akun yang sedang login. Pengecualian: keterangan yang baru diupload boleh langsung dikoreksi tanpa password selama 1 jam oleh akun yang sama.
+- **Riwayat Perubahan.** Semua upload, edit, ganti file, hapus, dan submit tercatat di sheet `Log`, lengkap dengan siapa yang mengubah, kapan, apa yang berubah (sebelum → sesudah), dan alasannya. Riwayat bisa dilihat di menu Rekap, tab **Riwayat Perubahan**.
+- **File yang dihapus atau diganti** langsung dipindahkan ke *Trash* Google Drive. Drive mengosongkan Trash otomatis setelah 30 hari, jadi file yang terhapus karena salah klik masih bisa dipulihkan dalam rentang itu.
+- **Lihat / unduh file** dilakukan lewat aplikasi, jadi operator DPD tidak perlu diberi akses ke folder Drive.
+- **Unduh Excel** menghasilkan file `.xlsx` rapi: judul rata tengah, header hijau, kolom No, border, dan filter.
+
+> **Setelah mengganti `Code.gs` dengan versi baru**, jalankan lagi fungsi `setup` sekali. Langkah ini menambahkan sheet `Log` dan kolom baru tanpa mengubah data lama. Setelah itu buat versi deployment baru.
+
+---
+
 ## Cara menghitung progres
 
 - **Target per tingkatan** = jumlah kecamatan DPD tersebut. Targetnya adalah 1 dokumen C1 per kecamatan per tingkatan.

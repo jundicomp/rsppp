@@ -4,7 +4,8 @@ import { call } from '../api/index.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { JENIS } from '../lib/constants.js';
 import { rankDpd } from '../lib/progress.js';
-import { downloadText, fmtDateTime, toCsv } from '../lib/format.js';
+import { fmtDateTime } from '../lib/format.js';
+import { exportXlsx } from '../lib/excel.js';
 import Icon from '../components/Icon.jsx';
 import Capaian from '../components/Capaian.jsx';
 import { Loading, MiniBars, ProgressLine, SearchBox, TableTabs } from '../components/ui.jsx';
@@ -69,13 +70,32 @@ export default function Dashboard() {
   const canOpen = (id) => !isDpd || id === user.dpdId;
   const openRekap = (id) => { if (!canOpen(id)) return; sessionStorage.setItem('c1_dpd', id); nav('/rekap'); };
   const mine = isDpd ? ranked.find((r) => r.id === user.dpdId) : null;
-  const exportCsv = () => downloadText('Peringkat_Capaian_DPD.csv', toCsv(ranked, [
-    { label: 'Peringkat', value: 'rank' }, { label: 'DPD', value: 'nama' }, { label: 'Jumlah Kecamatan', value: 'K' },
-    ...JENIS.map((j) => ({ label: j.label + ' (file)', value: (r) => r.per.find((p) => p.id === j.id).count })),
-    ...JENIS.map((j) => ({ label: j.label + ' (%)', value: (r) => r.per.find((p) => p.id === j.id).pct })),
-    { label: 'Capaian (%)', value: 'pct' }, { label: 'Total File C1', value: 'totalFiles' }, { label: 'Usulan Bacaleg', value: 'bacaleg' },
-    { label: 'Upload Terakhir', value: (r) => (r.lastUpload ? fmtDateTime(r.lastUpload) : '') }, { label: 'Status', value: (r) => status(r).label }
-  ]));
+  const exportCsv = async () => {
+    try {
+      await exportXlsx({
+        filename: 'Peringkat_Capaian_DPD' + (tk ? '_' + tkLabel.replace(/\W+/g, '') : ''), sheetName: 'Peringkat',
+        title: 'PERINGKAT CAPAIAN UPLOAD C1 PEMILU 2024', subtitle: 'DPW PKS Sumatera Selatan · ' + (tk ? 'Tingkatan ' + tkLabel : 'Semua tingkatan'),
+        rows: view,
+        columns: [
+          { label: 'Peringkat', value: 'vRank', width: 11, align: 'center' },
+          { label: 'DPD', value: (r) => r.nama.replace('DPD PKS ', ''), width: 32 },
+          { label: 'Jumlah Kecamatan', value: (r) => r.K || '', width: 12, align: 'center' },
+          ...(tk ? [
+            { label: 'File C1 ' + tkLabel, value: 'vFiles', width: 14, align: 'center' },
+            { label: 'Capaian (%)', value: 'vPct', width: 13, align: 'center' },
+            { label: 'PR (kecamatan)', value: (r) => (r.K ? r.vPr : ''), width: 14, align: 'center' }
+          ] : [
+            ...JENIS.map((j) => ({ label: j.label + ' (%)', value: (r) => r.per.find((p) => p.id === j.id).pct, width: 12, align: 'center' })),
+            { label: 'Capaian Total (%)', value: 'pct', width: 13, align: 'center' },
+            { label: 'Total File C1', value: 'totalFiles', width: 12, align: 'center' },
+            { label: 'Usulan Bacaleg', value: 'bacaleg', width: 12, align: 'center' }
+          ]),
+          { label: 'Upload Terakhir', value: (r) => (r.lastUpload ? fmtDateTime(r.lastUpload) : ''), width: 24 },
+          { label: 'Status', value: (r) => status(r).label, width: 20 }
+        ]
+      });
+    } catch (e) { setErr('Gagal membuat Excel: ' + e.message); }
+  };
 
   return (
     <>
