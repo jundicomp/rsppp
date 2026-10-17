@@ -115,16 +115,6 @@ export default function Layout({ children, narrow }) {
             <NavLink key={it.to} to={it.to}><Icon name={it.icon} size={20} /><span>{it.label}</span></NavLink>
           ))}
         </nav>
-        {user && (
-          <div className="side-foot">
-            <div className="side-who">
-              <span className="side-role">{ROLE_LABEL[user.role]}</span>
-              <span className="side-dpd">{user.dpdNama || 'DPW PKS Sumatera Selatan'}</span>
-            </div>
-            <NavLink to="/akun" className="side-mini"><Icon name="user" size={18} /> Akun Saya</NavLink>
-            <button className="side-mini danger" onClick={doLogout}><Icon name="logout" size={18} /> Keluar</button>
-          </div>
-        )}
       </aside>
       {open && <div className="side-backdrop" onClick={() => setOpen(false)} aria-hidden="true" />}
 
