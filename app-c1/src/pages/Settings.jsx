@@ -106,7 +106,7 @@ export default function Settings() {
         <div className="card-sub hint-text" style={{ lineHeight: 1.6 }}>
           {isDemo
             ? 'Mode demo: file tidak benar-benar disimpan. Isi VITE_API_URL agar file masuk ke folder Google Drive.'
-            : 'File C1 disimpan di folder Google Drive yang ID-nya diatur di Script Properties (FOLDER_ID), dengan subfolder otomatis per DPD lalu per jenis pemilihan.'}
+            : 'File Rekap Kecamatan (D Hasil) disimpan di folder Google Drive yang ID-nya diatur di Script Properties (FOLDER_ID), dengan subfolder otomatis per DPD lalu per jenis pemilihan.'}
         </div>
       </section>
     </>

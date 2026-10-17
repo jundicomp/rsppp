@@ -33,8 +33,8 @@ export default function Login() {
       <aside className="login-aside">
         <img src="./logo-light.png" alt="Logo PKS" />
         <div>
-          <h1>Upload Dokumen <span>C1 Pemilu 2024</span></h1>
-          <p>Untuk DPD PKS Kota/Kabupaten se-Sumatera Selatan: upload C1 DPR RI, DPRD Provinsi, DPRD Kab/Kota, DPD RI, dan Pilpres, serta usulan nama bacaleg. Bisa dicicil dan dilanjutkan kapan saja.</p>
+          <h1>Upload Dokumen <span>Hasil Suara Pemilu 2024</span></h1>
+          <p>Untuk DPD PKS Kota/Kabupaten se-Sumatera Selatan: upload Rekap Kecamatan (D Hasil) DPR RI, DPRD Provinsi, DPRD Kab/Kota, DPD RI, dan Pilpres, serta usulan nama bacaleg. Bisa dicicil dan dilanjutkan kapan saja.</p>
         </div>
         <div style={{ fontSize: 14, color: '#fff' }}>Akun dibuat oleh admin. Lupa password? Hubungi admin.</div>
       </aside>

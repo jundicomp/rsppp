@@ -1,4 +1,4 @@
-export const APP_TITLE = 'Upload Dokumen C1 Pemilu 2024';
+export const APP_TITLE = 'Upload Dokumen Hasil Suara Pemilu 2024';
 export const APP_ORG = 'Partai Keadilan Sejahtera';
 export const CREDIT = 'RSPP DPW PKS Sumsel';
 export const YEAR = 2026;

@@ -1,7 +1,7 @@
 import { Donut, SplitBar } from './ui.jsx';
 
 /** Panel infografis capaian satu DPD (atau gabungan). prog = hasil dpdProgress(). */
-export default function Capaian({ prog, title = 'Capaian Upload C1', active, onPick }) {
+export default function Capaian({ prog, title = 'Capaian Upload Rekap Kecamatan (D Hasil)', active, onPick }) {
   const worst = [...prog.per].sort((a, b) => b.pr - a.pr)[0];
   return (
     <section className="card" style={{ overflow: 'hidden' }}>

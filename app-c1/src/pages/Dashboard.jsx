@@ -74,20 +74,20 @@ export default function Dashboard() {
     try {
       await exportXlsx({
         filename: 'Peringkat_Capaian_DPD' + (tk ? '_' + tkLabel.replace(/\W+/g, '') : ''), sheetName: 'Peringkat',
-        title: 'PERINGKAT CAPAIAN UPLOAD C1 PEMILU 2024', subtitle: 'DPW PKS Sumatera Selatan · ' + (tk ? 'Tingkatan ' + tkLabel : 'Semua tingkatan'),
+        title: 'PERINGKAT CAPAIAN UPLOAD REKAP KECAMATAN (D HASIL) PEMILU 2024', subtitle: 'DPW PKS Sumatera Selatan · ' + (tk ? 'Tingkatan ' + tkLabel : 'Semua tingkatan'),
         rows: view,
         columns: [
           { label: 'Peringkat', value: 'vRank', width: 11, align: 'center' },
           { label: 'DPD', value: (r) => r.nama.replace('DPD PKS ', ''), width: 32 },
           { label: 'Jumlah Kecamatan', value: (r) => r.K || '', width: 12, align: 'center' },
           ...(tk ? [
-            { label: 'File C1 ' + tkLabel, value: 'vFiles', width: 14, align: 'center' },
+            { label: 'File D Hasil ' + tkLabel, value: 'vFiles', width: 14, align: 'center' },
             { label: 'Capaian (%)', value: 'vPct', width: 13, align: 'center' },
             { label: 'PR (kecamatan)', value: (r) => (r.K ? r.vPr : ''), width: 14, align: 'center' }
           ] : [
             ...JENIS.map((j) => ({ label: j.label + ' (%)', value: (r) => r.per.find((p) => p.id === j.id).pct, width: 12, align: 'center' })),
             { label: 'Capaian Total (%)', value: 'pct', width: 13, align: 'center' },
-            { label: 'Total File C1', value: 'totalFiles', width: 12, align: 'center' },
+            { label: 'Total File D Hasil', value: 'totalFiles', width: 12, align: 'center' },
             { label: 'Usulan Bacaleg', value: 'bacaleg', width: 12, align: 'center' }
           ]),
           { label: 'Upload Terakhir', value: (r) => (r.lastUpload ? fmtDateTime(r.lastUpload) : ''), width: 24 },
@@ -113,7 +113,7 @@ export default function Dashboard() {
 
       <section className="kpis">
         <div className="kpi"><span>Capaian se-provinsi</span><b>{agg.pct}%</b><small>{agg.done} dari {agg.target} dokumen target</small></div>
-        <div className="kpi"><span>Total file C1</span><b>{totalFiles}</b><small>dari semua DPD</small></div>
+        <div className="kpi"><span>Total file D Hasil</span><b>{totalFiles}</b><small>dari semua DPD</small></div>
         <div className="kpi"><span>DPD sudah upload</span><b>{active}<span style={{ fontSize: 16, color: 'var(--ink)', fontWeight: 600 }}> / {ranked.length}</span></b><small>{ranked.length - active} belum mulai</small></div>
         <div className="kpi"><span>Usulan bacaleg</span><b>{totalBacaleg}</b><small>nama diusulkan</small></div>
       </section>
@@ -123,7 +123,7 @@ export default function Dashboard() {
       <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
           <h2 className="card-title">Capaian tertinggi</h2>
-          <span className="card-sub">Persentase upload C1 terhadap target kecamatan</span>
+          <span className="card-sub">Persentase upload Rekap Kecamatan (D Hasil) terhadap target kecamatan</span>
         </div>
         {top.length ? (
           <div className="podium">
@@ -158,7 +158,7 @@ export default function Dashboard() {
           <table className="tbl" style={{ minWidth: 920 }}>
             <thead>
               {tk
-                ? <tr><th>#</th><th>DPD</th><th>Kec.</th><th style={{ width: 240 }}>Capaian {tkLabel}</th><th>File C1</th><th>PR (kec.)</th><th>Upload terakhir</th><th>Status</th></tr>
+                ? <tr><th>#</th><th>DPD</th><th>Kec.</th><th style={{ width: 240 }}>Capaian {tkLabel}</th><th>File D Hasil</th><th>PR (kec.)</th><th>Upload terakhir</th><th>Status</th></tr>
                 : <tr><th>#</th><th>DPD</th><th>Kec.</th><th title="DPR RI · DPRD Prov · DPRD Kab/Kota · DPD RI · Pilpres">Per tingkatan</th><th style={{ width: 220 }}>Capaian</th><th>File</th><th>Bacaleg</th><th>Upload terakhir</th><th>Status</th></tr>}
             </thead>
             <tbody>
