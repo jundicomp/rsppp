@@ -21,11 +21,11 @@ export function Footer() {
 
 function navItems(can) {
   return [
-    { to: '/dashboard', label: 'Dashboard', show: true },
-    { to: '/input', label: 'Input Data', show: can('superadmin', 'dpd') },
-    { to: '/rekap', label: 'Rekap', show: true },
-    { to: '/users', label: 'User', show: can('superadmin') },
-    { to: '/pengaturan', label: 'Pengaturan', show: can('superadmin') }
+    { to: '/dashboard', label: 'Dashboard', icon: 'grid', show: true },
+    { to: '/input', label: 'Input Data', icon: 'upload', show: can('superadmin', 'dpd') },
+    { to: '/rekap', label: 'Rekap', icon: 'table', show: true },
+    { to: '/users', label: 'User', icon: 'users', show: can('superadmin'), group: 'Admin' },
+    { to: '/pengaturan', label: 'Pengaturan', icon: 'settings', show: can('superadmin'), group: 'Admin' }
   ].filter((x) => x.show);
 }
 
@@ -68,55 +68,85 @@ function ProfileMenu({ user, onLogout }) {
   );
 }
 
+function Brand({ compact }) {
+  return (
+    <NavLink to="/" className={'brand' + (compact ? ' compact' : '')}>
+      <img src="./logo-mark.png" alt="Logo PKS" />
+      <span className="brand-text">
+        <span className="brand-title">{APP_TITLE}</span>
+        {!compact && <span className="brand-sub">{APP_ORG}</span>}
+      </span>
+    </NavLink>
+  );
+}
+
 export default function Layout({ children, narrow }) {
   const { user, can, logout } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
-  const [menu, setMenu] = useState(false);
-  useEffect(() => { setMenu(false); }, [loc.pathname]);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { setOpen(false); }, [loc.pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', esc);
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', esc); document.body.style.overflow = ''; };
+  }, [open]);
   const doLogout = async () => { await logout(); nav('/login'); };
   const items = user ? navItems(can) : [];
+  const main = items.filter((i) => !i.group);
+  const admin = items.filter((i) => i.group === 'Admin');
 
   return (
-    <div className="app">
-      {isDemo && (
-        <div className="demo-ribbon">
-          Mode demo · data contoh tersimpan di browser ini saja ·{' '}
-          <button onClick={() => { resetDemo(); location.reload(); }}>reset data demo</button>
+    <div className="shell">
+      <aside className={'side' + (open ? ' open' : '')} aria-label="Menu utama">
+        <div className="side-top">
+          <Brand />
+          <button className="side-close" aria-label="Tutup menu" onClick={() => setOpen(false)}><Icon name="close" size={22} /></button>
         </div>
-      )}
-      <header className="hdr">
-        <div className="hdr-in">
-          <NavLink to="/" className="hdr-brand">
-            <img className="hdr-logo" src="./logo-mark.png" alt="Logo PKS" />
-            <span className="hdr-text">
-              <span className="hdr-title">{APP_TITLE}</span>
-              <span className="hdr-sub">{user?.dpdNama || APP_ORG}</span>
-            </span>
-          </NavLink>
-          {user && (
-            <>
-              <nav className="hdr-nav" aria-label="Menu utama">
-                {items.map((it) => <NavLink key={it.to} to={it.to}>{it.label}</NavLink>)}
-              </nav>
-              <div className="hdr-right">
-                <ProfileMenu user={user} onLogout={doLogout} />
-                <button className="burger" aria-label={menu ? 'Tutup menu' : 'Buka menu'} aria-expanded={menu} onClick={() => setMenu(!menu)}>
-                  <Icon name={menu ? 'close' : 'menu'} size={22} />
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-        {user && menu && (
-          <nav className="mnav" aria-label="Menu">
-            {items.map((it) => <NavLink key={it.to} to={it.to}>{it.label}<Icon name="chevronRight" size={18} /></NavLink>)}
-          </nav>
+        <nav className="side-nav">
+          <div className="side-label">Menu</div>
+          {main.map((it) => (
+            <NavLink key={it.to} to={it.to}><Icon name={it.icon} size={20} /><span>{it.label}</span></NavLink>
+          ))}
+          {admin.length > 0 && <div className="side-label">Admin</div>}
+          {admin.map((it) => (
+            <NavLink key={it.to} to={it.to}><Icon name={it.icon} size={20} /><span>{it.label}</span></NavLink>
+          ))}
+        </nav>
+        {user && (
+          <div className="side-foot">
+            <div className="side-who">
+              <span className="side-role">{ROLE_LABEL[user.role]}</span>
+              <span className="side-dpd">{user.dpdNama || 'DPW PKS Sumatera Selatan'}</span>
+            </div>
+            <NavLink to="/akun" className="side-mini"><Icon name="user" size={18} /> Akun Saya</NavLink>
+            <button className="side-mini danger" onClick={doLogout}><Icon name="logout" size={18} /> Keluar</button>
+          </div>
         )}
-        <div className="hdr-bar" />
-      </header>
-      <main className={'main' + (narrow ? ' narrow' : '')}>{children}</main>
-      <Footer />
+      </aside>
+      {open && <div className="side-backdrop" onClick={() => setOpen(false)} aria-hidden="true" />}
+
+      <div className="content">
+        {isDemo && (
+          <div className="demo-ribbon">
+            Mode demo · data contoh tersimpan di browser ini saja ·{' '}
+            <button onClick={() => { resetDemo(); location.reload(); }}>reset data demo</button>
+          </div>
+        )}
+        <header className="topbar">
+          <button className="burger" aria-label="Buka menu" aria-expanded={open} onClick={() => setOpen(true)}><Icon name="menu" size={22} /></button>
+          <div className="topbar-mobile-brand"><Brand compact /></div>
+          <div className="topbar-ctx">
+            <span className="topbar-ctx-sub">{APP_ORG}</span>
+            <span className="topbar-ctx-main">{user?.dpdNama || 'DPW PKS Sumatera Selatan'}</span>
+          </div>
+          {user && <div className="hdr-right"><ProfileMenu user={user} onLogout={doLogout} /></div>}
+        </header>
+        <main className={'main' + (narrow ? ' narrow' : '')}>{children}</main>
+        <Footer />
+      </div>
     </div>
   );
 }
