@@ -17,7 +17,7 @@ export function useDpdList() {
   return { dpds, dpdId, setDpdId, dpd: dpds.find((d) => d.id === dpdId) || null, reloadDpd: reload, err };
 }
 
-/** Muat C1 + bacaleg satu DPD. */
+/** Muat Rekap Kecamatan (D Hasil) + bacaleg satu DPD. */
 export function useDpdRecords(dpdId) {
   const [c1, setC1] = useState(null);
   const [bacaleg, setBacaleg] = useState(null);

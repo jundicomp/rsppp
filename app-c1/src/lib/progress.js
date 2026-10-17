@@ -2,7 +2,7 @@ import { JENIS } from './constants.js';
 
 /**
  * Hitung capaian satu DPD.
- * Target = jumlah kecamatan untuk tiap tingkatan (1 dokumen C1 per kecamatan per tingkatan).
+ * Target = jumlah kecamatan untuk tiap tingkatan (1 Rekap Kecamatan (D Hasil) per kecamatan per tingkatan).
  * Jumlah file per tingkatan dibatasi maksimal = jumlah kecamatan, supaya tidak lewat 100%.
  */
 export function dpdProgress(row) {

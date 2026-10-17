@@ -1,5 +1,5 @@
 /**
- * Upload Dokumen C1 Pemilu 2024 — Backend Google Apps Script
+ * Upload Dokumen Hasil Suara Pemilu 2024 — Backend Google Apps Script
  * Dibuat oleh RSPP DPW PKS Sumsel, 2026.
  *
  * Database : Google Sheet tempat script ini ditempel (Extensions > Apps Script)
@@ -82,7 +82,7 @@ function setup() {
 
 // ====== HTTP ENTRY ======
 function doGet() {
-  return json_({ ok: true, app: 'Upload Dokumen C1 Pemilu 2024', time: now_() });
+  return json_({ ok: true, app: 'Upload Dokumen Hasil Suara Pemilu 2024', time: now_() });
 }
 
 function doPost(e) {
@@ -252,7 +252,7 @@ function saveDpd_(r) {
   });
 }
 
-// ====== C1 ======
+// ====== REKAP KECAMATAN (D HASIL) — sheet 'C1' ======
 function scopeFilter_(r, u) {
   return function (row) {
     if (u.role === 'dpd') return row.dpdId === u.dpdId;
@@ -268,7 +268,7 @@ function targetDpd_(r, u) {
 
 function uploadC1_(r, u) {
   var dpdId = targetDpd_(r, u);
-  if (JENIS.indexOf(r.jenis) < 0) throw new Error('Jenis C1 tidak valid');
+  if (JENIS.indexOf(r.jenis) < 0) throw new Error('Tingkatan tidak valid');
   if (!String(r.uploader || '').trim()) throw new Error('Nama pengupload wajib diisi');
   if (!r.base64) throw new Error('File kosong');
   var bytes = Utilities.base64Decode(r.base64);
@@ -281,7 +281,7 @@ function uploadC1_(r, u) {
     mime: r.mime || '', size: bytes.length, uploader: String(r.uploader).trim(), uploadedAt: now_(), userId: u.id };
   withLock_(function () {
     append_('C1', row);
-    log_(u, dpdId, 'UPLOAD', 'C1', row.id, 'C1 ' + JENIS_LABEL[r.jenis] + ' · ' + safe + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
+    log_(u, dpdId, 'UPLOAD', 'D Hasil', row.id, 'D Hasil ' + JENIS_LABEL[r.jenis] + ' · ' + safe + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
   });
   return row;
 }
@@ -308,7 +308,7 @@ function updateC1_(r, u) {
   if (ket === String(row.keterangan)) return true;
   withLock_(function () {
     update_('C1', r.id, { keterangan: ket, updatedAt: now_(), updatedBy: u.username });
-    log_(u, row.dpdId, 'EDIT', 'C1', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JENIS_LABEL[row.jenis] + ', ' + row.fileName + ')', r.alasan);
+    log_(u, row.dpdId, 'EDIT', 'D Hasil', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JENIS_LABEL[row.jenis] + ', ' + row.fileName + ')', r.alasan);
   });
   return true;
 }
@@ -318,7 +318,7 @@ function editC1_(r, u) {
   verifyPass_(u, r.password);
   var row = c1Row_(r.id, u);
   var jenis = r.jenis || row.jenis;
-  if (JENIS.indexOf(jenis) < 0) throw new Error('Jenis C1 tidak valid');
+  if (JENIS.indexOf(jenis) < 0) throw new Error('Tingkatan tidak valid');
   var ket = r.keterangan !== undefined ? String(r.keterangan).trim() : String(row.keterangan);
   if (!ket) throw new Error('Keterangan wajib diisi');
   var patch = { keterangan: ket, jenis: jenis, updatedAt: now_(), updatedBy: u.username };
@@ -342,7 +342,7 @@ function editC1_(r, u) {
   if (!notes.length) return row;
   withLock_(function () {
     update_('C1', row.id, patch);
-    log_(u, row.dpdId, aksi, 'C1', row.id, notes.join('; '), r.alasan);
+    log_(u, row.dpdId, aksi, 'D Hasil', row.id, notes.join('; '), r.alasan);
   });
   return Object.assign(row, patch);
 }
@@ -353,7 +353,7 @@ function deleteC1_(r, u) {
   trashFile_(row.fileId);
   withLock_(function () {
     deleteWhere_('C1', 'id', r.id);
-    log_(u, row.dpdId, 'HAPUS', 'C1', row.id, 'C1 ' + JENIS_LABEL[row.jenis] + ' "' + row.keterangan + '" · ' + row.fileName + ' (diupload ' + row.uploader + ') dihapus, file dihapus dari Drive', r.alasan);
+    log_(u, row.dpdId, 'HAPUS', 'D Hasil', row.id, 'D Hasil ' + JENIS_LABEL[row.jenis] + ' "' + row.keterangan + '" · ' + row.fileName + ' (diupload ' + row.uploader + ') dihapus, file dihapus dari Drive', r.alasan);
   });
   return true;
 }
@@ -390,7 +390,7 @@ function subFolder_(parent, name) {
 function jenisFolder_(dpdId, jenis) {
   var dpd = rows_('DPD').filter(function (d) { return d.id === dpdId; })[0];
   var dpdFolder = subFolder_(rootFolder_(), dpd ? dpd.nama : dpdId);
-  return subFolder_(dpdFolder, 'C1 ' + JENIS_LABEL[jenis]);
+  return subFolder_(dpdFolder, 'D Hasil ' + JENIS_LABEL[jenis]);
 }
 
 // ====== BACALEG ======
@@ -443,13 +443,13 @@ function submit_(r, u) {
   var dpdId = targetDpd_(r, u);
   var c1 = rows_('C1').filter(function (x) { return x.dpdId === dpdId; });
   var missing = c1.filter(function (x) { return !String(x.keterangan).trim(); }).length;
-  if (missing) throw new Error(missing + ' dokumen C1 belum ada keterangannya');
+  if (missing) throw new Error(missing + ' Rekap Kecamatan (D Hasil) belum ada keterangannya');
   var bc = rows_('Bacaleg').filter(function (x) { return x.dpdId === dpdId; });
   var row = { id: 's' + Date.now().toString(36), dpdId: dpdId, userId: u.id, uploader: r.uploader || u.nama,
     submittedAt: now_(), totalC1: c1.length, totalBacaleg: bc.length };
   withLock_(function () {
     append_('Submissions', row);
-    log_(u, dpdId, 'SUBMIT', 'Laporan', row.id, c1.length + ' file C1, ' + bc.length + ' usulan bacaleg dilaporkan ke admin', '');
+    log_(u, dpdId, 'SUBMIT', 'Laporan', row.id, c1.length + ' file D Hasil, ' + bc.length + ' usulan bacaleg dilaporkan ke admin', '');
   });
   return row;
 }

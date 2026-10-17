@@ -1,7 +1,7 @@
 import { fetchFile } from '../api/index.js';
 
 /**
- * Lihat atau unduh file C1 lewat server. Jendela untuk "lihat" dibuka langsung saat diklik
+ * Lihat atau unduh file Rekap Kecamatan (D Hasil) lewat server. Jendela untuk "lihat" dibuka langsung saat diklik
  * supaya tidak diblokir browser, lalu diisi setelah file selesai dimuat.
  */
 export async function openC1File(row, mode = 'view') {

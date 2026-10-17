@@ -1,8 +1,8 @@
-# Upload Dokumen C1 Pemilu 2024
+# Upload Dokumen Hasil Suara Pemilu 2024
 
 Aplikasi web untuk DPD PKS Kota/Kabupaten se-Sumatera Selatan:
 
-- **Upload dokumen C1** per tingkatan (DPR RI, DPRD Provinsi, DPRD Kab/Kota, DPD RI, Pilpres). Ada progress upload, keterangan wajib, serta nama pengupload dan tanggal/jam yang tercatat otomatis.
+- **Upload Rekap Kecamatan (D Hasil)** per tingkatan (DPR RI, DPRD Provinsi, DPRD Kab/Kota, DPD RI, Pilpres). Ada progress upload, keterangan wajib, serta nama pengupload dan tanggal/jam yang tercatat otomatis.
 - **Usulan bacaleg**: nama, tingkat caleg, profil singkat, dan pemberi usul/rekomendasi.
 - **Rekap per DPD** dengan infografis capaian dan PR per tingkatan (target = jumlah kecamatan), plus unduh Excel (CSV).
 - **Dashboard DPW** yang menampilkan capaian se-provinsi, peringkat DPD dari persentase tertinggi, dan DPD yang perlu ditindaklanjuti.
@@ -29,7 +29,7 @@ GitHub Pages /rsppp/c1/ (React, file statis)
         │  fetch POST (JSON)
         ▼
 Google Apps Script Web App  ──►  Google Sheet (database)
-                            └─►  Folder Google Drive (file C1)
+                            └─►  Folder Google Drive (file D Hasil)
 ```
 
 **Mode demo.** Kalau `VITE_API_URL` kosong saat build, aplikasi berjalan dengan data contoh yang disimpan di browser. Mode ini cocok untuk mencoba tampilan sebelum Google Sheet siap. Akun demo yang tersedia:
@@ -46,7 +46,7 @@ Google Apps Script Web App  ──►  Google Sheet (database)
 |---|---|
 | **Super Admin** | Semua: dashboard, input untuk DPD mana pun, rekap semua DPD, kelola user, pengaturan (nomor WA admin, data DPD dan jumlah kecamatan) |
 | **Admin DPW** | Dashboard dan rekap semua DPD (hanya lihat) |
-| **Operator DPD** | Input C1 dan bacaleg serta rekap **DPD-nya sendiri** saja |
+| **Operator DPD** | Input D Hasil dan bacaleg serta rekap **DPD-nya sendiri** saja |
 
 Akun dibuat oleh Super Admin di menu **User**. Setiap user bisa mengganti passwordnya sendiri di menu **Akun**.
 
@@ -54,12 +54,12 @@ Akun dibuat oleh Super Admin di menu **User**. Setiap user bisa mengganti passwo
 
 ## Setup Backend (Google Sheet + Apps Script)
 
-1. **Buat Google Sheet baru**, misalnya dengan nama `Database C1 Pemilu 2024`.
+1. **Buat Google Sheet baru**, misalnya dengan nama `Database Hasil Suara Pemilu 2024`.
 2. Di Sheet, buka **Extensions → Apps Script**.
 3. Hapus isi `Code.gs` bawaan, lalu tempel isi `apps-script/Code.gs` dari repo ini.
 4. Klik ikon ⚙️ **Project Settings**:
    - Centang **Show "appsscript.json" manifest file in editor**, lalu ganti isinya dengan `apps-script/appsscript.json`.
-   - Di bagian **Script Properties**, tambahkan property `FOLDER_ID` berisi ID folder Drive tempat file C1 disimpan. ID folder adalah bagian URL setelah `/folders/`.
+   - Di bagian **Script Properties**, tambahkan property `FOLDER_ID` berisi ID folder Drive tempat file D Hasil disimpan. ID folder adalah bagian URL setelah `/folders/`.
 5. Kembali ke editor, pilih fungsi **`setup`**, klik **Run**, lalu izinkan aksesnya.
    - Sheet `Users`, `Sessions`, `DPD`, `C1`, `Bacaleg`, `Submissions`, dan `Settings` dibuat otomatis.
    - 17 DPD se-Sumsel terisi otomatis.
@@ -76,11 +76,11 @@ Akun dibuat oleh Super Admin di menu **User**. Setiap user bisa mengganti passwo
 ```
 [Folder FOLDER_ID]
  └─ DPD PKS Kota Palembang
-     ├─ C1 DPR RI
-     ├─ C1 DPRD Provinsi
-     ├─ C1 DPRD Kab/Kota
-     ├─ C1 DPD RI
-     └─ C1 Pilpres
+     ├─ D Hasil DPR RI
+     ├─ D Hasil DPRD Provinsi
+     ├─ D Hasil DPRD Kab/Kota
+     ├─ D Hasil DPD RI
+     └─ D Hasil Pilpres
 ```
 
 Subfolder dibuat otomatis. File tersimpan atas nama akun Google pemilik script. Supaya admin DPW bisa membuka file dari tombol **Lihat**, bagikan folder induknya ke email para admin (cukup akses *Viewer*).
@@ -112,7 +112,7 @@ Untuk mencoba di komputer sendiri: `npm run dev` di dalam folder `app-c1`.
 
 ## Edit, hapus, dan riwayat perubahan
 
-- **Konfirmasi password.** Setiap edit, ganti file, dan hapus (C1 maupun bacaleg) wajib dikonfirmasi dengan password akun yang sedang login. Pengecualian: keterangan yang baru diupload boleh langsung dikoreksi tanpa password selama 1 jam oleh akun yang sama.
+- **Konfirmasi password.** Setiap edit, ganti file, dan hapus (D Hasil maupun bacaleg) wajib dikonfirmasi dengan password akun yang sedang login. Pengecualian: keterangan yang baru diupload boleh langsung dikoreksi tanpa password selama 1 jam oleh akun yang sama.
 - **Riwayat Perubahan.** Semua upload, edit, ganti file, hapus, dan submit tercatat di sheet `Log`, lengkap dengan siapa yang mengubah, kapan, apa yang berubah (sebelum → sesudah), dan alasannya. Riwayat bisa dilihat di menu Rekap, tab **Riwayat Perubahan**.
 - **File yang dihapus atau diganti** langsung dipindahkan ke *Trash* Google Drive. Drive mengosongkan Trash otomatis setelah 30 hari, jadi file yang terhapus karena salah klik masih bisa dipulihkan dalam rentang itu.
 - **Lihat / unduh file** dilakukan lewat aplikasi, jadi operator DPD tidak perlu diberi akses ke folder Drive.
@@ -124,14 +124,16 @@ Untuk mencoba di komputer sendiri: `npm run dev` di dalam folder `app-c1`.
 
 ## Cara menghitung progres
 
-- **Target per tingkatan** = jumlah kecamatan DPD tersebut. Targetnya adalah 1 dokumen C1 per kecamatan per tingkatan.
+- **Target per tingkatan** = jumlah kecamatan DPD tersebut. Targetnya adalah 1 Rekap Kecamatan (D Hasil) per kecamatan per tingkatan.
 - **Capaian per tingkatan** = jumlah file pada tingkatan itu ÷ jumlah kecamatan. Angka ini dibatasi maksimal 100%.
 - **Capaian DPD** = total capaian 5 tingkatan ÷ (jumlah kecamatan × 5).
 - **Peringkat dashboard** diurutkan dari capaian DPD tertinggi.
 
 ## Catatan teknis
 
-- **Ukuran file.** Batas aman per file adalah **35 MB**. Ini karena batas payload Apps Script, ditambah file dikirim sebagai base64 yang ukurannya bertambah sekitar 33%. Foto C1 dari HP biasanya jauh di bawah batas ini.
+- **Ukuran file.** Batas aman per file adalah **35 MB**. Ini karena batas payload Apps Script, ditambah file dikirim sebagai base64 yang ukurannya bertambah sekitar 33%. Foto/scan D Hasil dari HP biasanya jauh di bawah batas ini.
 - **Login.** Password disimpan sebagai hash SHA-256 dengan salt per user. Sesi login berlaku 7 hari, dan token sesi disimpan di sheet `Sessions`.
 - **Tulis bersamaan.** Penulisan ke Sheet memakai `LockService`, jadi upload dari banyak DPD di waktu yang sama tetap aman.
 - **Sumber data.** Sheet adalah database utama. Jangan ubah urutan atau nama kolom di baris pertama.
+
+> Catatan penamaan: di layar dokumen ini disebut **Rekap Kecamatan (D Hasil)**. Nama teknis di balik layar tetap `C1` (nama sheet, kolom `totalC1`, folder `app-c1`/`c1`, dan alamat `/rsppp/c1/`) supaya data dan link lama tidak rusak.

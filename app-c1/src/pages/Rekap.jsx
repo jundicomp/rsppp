@@ -58,8 +58,8 @@ export default function Rekap() {
 
   const run = async (fn) => { setExporting(true); try { await fn(); } catch (e) { toast('Gagal membuat Excel: ' + e.message, 'err'); } setExporting(false); };
   const exportC1 = () => run(() => exportXlsx({
-    filename: `Rekap_C1_${short}${jenis ? '_' + JENIS_LABEL[jenis].replace(/\W+/g, '') : ''}`, sheetName: 'Rekap C1',
-    title: 'REKAP DOKUMEN C1 PEMILU 2024', subtitle: dpdNama + ' · Tingkatan: ' + (jenis ? JENIS_LABEL[jenis] : 'Semua'),
+    filename: `Rekap_DHasil_${short}${jenis ? '_' + JENIS_LABEL[jenis].replace(/\W+/g, '') : ''}`, sheetName: 'Rekap D Hasil',
+    title: 'REKAP KECAMATAN (D HASIL) PEMILU 2024', subtitle: dpdNama + ' · Tingkatan: ' + (jenis ? JENIS_LABEL[jenis] : 'Semua'),
     rows: c1Rows,
     columns: [
       { label: 'Tingkatan', value: (r) => JENIS_LABEL[r.jenis], width: 16 },
@@ -124,7 +124,7 @@ export default function Rekap() {
       {!c1 || !bacaleg ? <Loading rows={4} /> : (
         <>
           <ScrollRow className="tabs-line" label="Kategori">
-            <button role="tab" aria-selected={cat === 'c1'} onClick={() => { setCat('c1'); setQ(''); }}>Dokumen C1 <span className="pill-count">{c1.length}</span></button>
+            <button role="tab" aria-selected={cat === 'c1'} onClick={() => { setCat('c1'); setQ(''); }}>Rekap Kecamatan (D Hasil) <span className="pill-count">{c1.length}</span></button>
             <button role="tab" aria-selected={cat === 'bacaleg'} onClick={() => { setCat('bacaleg'); setQ(''); }}>Usulan Bacaleg <span className="pill-count">{bacaleg.length}</span></button>
             <button role="tab" aria-selected={cat === 'log'} onClick={() => { setCat('log'); setQ(''); }}><Icon name="history" size={18} /> Riwayat Perubahan</button>
           </ScrollRow>
@@ -135,7 +135,7 @@ export default function Rekap() {
               <section className="card" style={{ overflow: 'hidden' }}>
                 <div className="card-head">
                   <div>
-                    <h2 className="card-title">Dokumen C1 · {jenis ? JENIS_LABEL[jenis] : 'Semua jenis'}</h2>
+                    <h2 className="card-title">Rekap Kecamatan (D Hasil) · {jenis ? JENIS_LABEL[jenis] : 'Semua jenis'}</h2>
                     <div className="card-sub">Menampilkan {c1Rows.length} dari {c1.length} dokumen</div>
                   </div>
                   <div className="tools">
@@ -143,7 +143,7 @@ export default function Rekap() {
                     <button className="btn btn-ghost btn-sm" style={{ height: 40 }} onClick={exportC1} disabled={exporting}><Icon name="download" size={16} /> {exporting ? 'Menyiapkan…' : 'Unduh Excel'}</button>
                   </div>
                 </div>
-                <TableTabs label="Tingkatan C1" value={jenis} onChange={(j) => { setJenis(j); setAll(false); }}
+                <TableTabs label="Tingkatan D Hasil" value={jenis} onChange={(j) => { setJenis(j); setAll(false); }}
                   tabs={[{ id: '', label: 'Semua', count: c1.length }, ...JENIS.map((j) => ({ id: j.id, label: j.label, count: c1.filter((x) => x.jenis === j.id).length }))]} />
                 <div className="table-wrap">
                   <table className="tbl" style={{ minWidth: 980 }}>
@@ -171,7 +171,7 @@ export default function Rekap() {
                     </tbody>
                   </table>
                 </div>
-                {!c1Rows.length && <div className="empty">Belum ada dokumen C1{jenis ? ' untuk ' + JENIS_LABEL[jenis] : ''}.</div>}
+                {!c1Rows.length && <div className="empty">Belum ada Rekap Kecamatan (D Hasil){jenis ? ' untuk ' + JENIS_LABEL[jenis] : ''}.</div>}
                 {c1Rows.length > LIMIT && (
                   <div style={{ padding: 10, textAlign: 'center' }}>
                     <button className="btn btn-plain btn-sm" onClick={() => setAll(!all)}>{all ? 'Tampilkan lebih sedikit' : `Tampilkan semua (${c1Rows.length})`}</button>

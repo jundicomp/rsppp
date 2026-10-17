@@ -4,7 +4,7 @@ import { ACCEPT, JENIS, JENIS_LABEL, TINGKAT } from '../lib/constants.js';
 import { fmtDateTime } from '../lib/format.js';
 import { PasswordConfirm } from './ui.jsx';
 
-/** Edit satu dokumen C1: keterangan, tingkatan, dan/atau ganti file. */
+/** Edit satu Rekap Kecamatan (D Hasil): keterangan, tingkatan, dan/atau ganti file. */
 export function EditC1Modal({ row, onClose, onSaved }) {
   const [ket, setKet] = useState(row.keterangan || '');
   const [jenis, setJenis] = useState(row.jenis);
@@ -13,7 +13,7 @@ export function EditC1Modal({ row, onClose, onSaved }) {
   const ref = useRef(null);
   const changed = ket.trim() !== String(row.keterangan || '') || jenis !== row.jenis || !!file;
   return (
-    <PasswordConfirm title="Edit dokumen C1" sub={row.fileName + ' · diupload ' + row.uploader + ', ' + fmtDateTime(row.uploadedAt)}
+    <PasswordConfirm title="Edit Rekap Kecamatan (D Hasil)" sub={row.fileName + ' · diupload ' + row.uploader + ', ' + fmtDateTime(row.uploadedAt)}
       confirmLabel="Simpan perubahan" canSubmit={changed && !!ket.trim()} progress={progress} onClose={onClose}
       onConfirm={async (password, alasan) => {
         const out = await editC1({ id: row.id, keterangan: ket.trim(), jenis, password, alasan }, file, setProgress);
@@ -51,15 +51,15 @@ export function EditC1Modal({ row, onClose, onSaved }) {
   );
 }
 
-/** Konfirmasi hapus dokumen C1 (file ikut dihapus dari Drive). */
+/** Konfirmasi hapus Rekap Kecamatan (D Hasil) (file ikut dihapus dari Drive). */
 export function DeleteC1Modal({ row, onClose, onDeleted }) {
   return (
-    <PasswordConfirm danger title="Hapus dokumen C1?" confirmLabel="Ya, hapus" onClose={onClose}
+    <PasswordConfirm danger title="Hapus Rekap Kecamatan (D Hasil)?" confirmLabel="Ya, hapus" onClose={onClose}
       sub="File akan dihapus dari Google Drive dan tercatat di Riwayat Perubahan."
       onConfirm={async (password, alasan) => { await call('deleteC1', { id: row.id, password, alasan }); onDeleted(row); }}>
       <div className="del-box">
         <b>{row.keterangan || '(tanpa keterangan)'}</b>
-        <span>C1 {JENIS_LABEL[row.jenis]} · {row.fileName}</span>
+        <span>D Hasil {JENIS_LABEL[row.jenis]} · {row.fileName}</span>
         <span>Diupload {row.uploader} · {fmtDateTime(row.uploadedAt)}</span>
       </div>
     </PasswordConfirm>

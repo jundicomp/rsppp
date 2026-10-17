@@ -35,7 +35,7 @@ function readBase64(file) {
   });
 }
 
-/** Upload satu file C1. onProgress(0..100) */
+/** Upload satu file Rekap Kecamatan (D Hasil). onProgress(0..100) */
 export async function uploadC1(file, meta, onProgress) {
   if (file.size > MAX_FILE_MB * 1024 * 1024) throw new Error('File lebih dari ' + MAX_FILE_MB + ' MB. Perkecil dulu (kompres/scan ulang).');
   onProgress && onProgress(2);
@@ -43,7 +43,7 @@ export async function uploadC1(file, meta, onProgress) {
   return guard(adapter.upload('uploadC1', { ...meta, fileName: file.name, mime: file.type, size: file.size, base64 }, token, onProgress));
 }
 
-/** Edit C1 dari tabel (butuh password). Kalau `file` diisi, file lama diganti dan dihapus dari Drive. */
+/** Edit Rekap Kecamatan (D Hasil) dari tabel (butuh password). Kalau `file` diisi, file lama diganti dan dihapus dari Drive. */
 export async function editC1(meta, file, onProgress) {
   if (!file) return call('editC1', meta);
   if (file.size > MAX_FILE_MB * 1024 * 1024) throw new Error('File lebih dari ' + MAX_FILE_MB + ' MB. Perkecil dulu (kompres/scan ulang).');
@@ -52,7 +52,7 @@ export async function editC1(meta, file, onProgress) {
   return guard(adapter.upload('editC1', { ...meta, fileName: file.name, mime: file.type, size: file.size, base64 }, token, onProgress));
 }
 
-/** Ambil isi file C1 lewat server (tidak perlu akses Drive langsung). */
+/** Ambil isi file Rekap Kecamatan (D Hasil) lewat server (tidak perlu akses Drive langsung). */
 export async function fetchFile(id) {
   const d = await call('getFile', { id });
   const bin = atob(d.base64);

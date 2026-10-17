@@ -2,7 +2,7 @@
 // Aktif otomatis kalau VITE_API_URL kosong. Berguna untuk mencoba tampilan sebelum Google Sheet siap.
 import { JENIS, TINGKAT } from '../lib/constants.js';
 
-const KEY = 'c1pemilu_demo_v2';
+const KEY = 'c1pemilu_demo_v3';
 const DPD_NAMES = [
   'Kota Palembang', 'Kota Prabumulih', 'Kota Pagar Alam', 'Kota Lubuklinggau',
   'Kab. Banyuasin', 'Kab. Empat Lawang', 'Kab. Lahat', 'Kab. Muara Enim',
@@ -38,8 +38,8 @@ function seed() {
       const n = Math.round(K * Math.min(1, level * (0.6 + r() * 0.6)));
       for (let i = 0; i < n; i++) {
         const t = new Date(now - Math.floor(r() * 6 * 864e5)).toISOString();
-        c1.push({ id: uid('c'), dpdId: d.id, jenis: j.id, keterangan: 'C1 Kecamatan ' + (i + 1),
-          fileName: 'C1_' + j.code + '_Kec' + (i + 1) + '.pdf', fileId: '', fileUrl: '', mime: 'application/pdf',
+        c1.push({ id: uid('c'), dpdId: d.id, jenis: j.id, keterangan: 'D Hasil Kecamatan ' + (i + 1),
+          fileName: 'DHasil_' + j.code + '_Kec' + (i + 1) + '.pdf', fileId: '', fileUrl: '', mime: 'application/pdf',
           size: 300000 + Math.floor(r() * 900000), uploader: names[(di + i) % names.length], uploadedAt: t, userId: '' });
       }
     });
@@ -52,12 +52,12 @@ function seed() {
   const opOf = (dpdId) => users.find((u) => u.dpdId === dpdId) || users[0];
   const JLs = Object.fromEntries(JENIS.map((j) => [j.id, j.label]));
   const log = c1.map((x) => ({ id: uid('l'), waktu: x.uploadedAt, userId: opOf(x.dpdId).id, username: opOf(x.dpdId).username + ' (' + x.uploader + ')',
-    dpdId: x.dpdId, aksi: 'UPLOAD', objek: 'C1', objekId: x.id, detail: 'C1 ' + JLs[x.jenis] + ' · ' + x.fileName + ' · "' + x.keterangan + '"', alasan: '' }));
+    dpdId: x.dpdId, aksi: 'UPLOAD', objek: 'D Hasil', objekId: x.id, detail: 'D Hasil ' + JLs[x.jenis] + ' · ' + x.fileName + ' · "' + x.keterangan + '"', alasan: '' }));
   const t = (h) => new Date(now - h * 3600e3).toISOString();
   log.push(
-    { id: uid('l'), waktu: t(5), userId: 'u3', username: 'dpd.palembang (Operator Kota Palembang)', dpdId: 'dpd01', aksi: 'GANTI_FILE', objek: 'C1', objekId: '', detail: 'File diganti: C1_DPR-RI_Kec2_buram.jpg → C1_DPR-RI_Kec2.pdf (file lama dihapus dari Drive)', alasan: 'Foto sebelumnya buram' },
-    { id: uid('l'), waktu: t(3), userId: 'u3', username: 'dpd.palembang (Operator Kota Palembang)', dpdId: 'dpd01', aksi: 'EDIT', objek: 'C1', objekId: '', detail: 'Jenis: DPR RI → DPRD Provinsi; Keterangan: "C1 Kec 3" → "C1 Kecamatan 3"', alasan: 'Salah pilih tingkatan' },
-    { id: uid('l'), waktu: t(2), userId: 'u3', username: 'dpd.palembang (Operator Kota Palembang)', dpdId: 'dpd01', aksi: 'HAPUS', objek: 'C1', objekId: '', detail: 'C1 Pilpres "C1 Kecamatan 2" · C1_Pilpres_Kec2_dobel.pdf (diupload Siti Rahmawati) dihapus, file dihapus dari Drive', alasan: 'File dobel' }
+    { id: uid('l'), waktu: t(5), userId: 'u3', username: 'dpd.palembang (Operator Kota Palembang)', dpdId: 'dpd01', aksi: 'GANTI_FILE', objek: 'D Hasil', objekId: '', detail: 'File diganti: DHasil_DPR-RI_Kec2_buram.jpg → DHasil_DPR-RI_Kec2.pdf (file lama dihapus dari Drive)', alasan: 'Foto sebelumnya buram' },
+    { id: uid('l'), waktu: t(3), userId: 'u3', username: 'dpd.palembang (Operator Kota Palembang)', dpdId: 'dpd01', aksi: 'EDIT', objek: 'D Hasil', objekId: '', detail: 'Jenis: DPR RI → DPRD Provinsi; Keterangan: "D Hasil Kec 3" → "D Hasil Kecamatan 3"', alasan: 'Salah pilih tingkatan' },
+    { id: uid('l'), waktu: t(2), userId: 'u3', username: 'dpd.palembang (Operator Kota Palembang)', dpdId: 'dpd01', aksi: 'HAPUS', objek: 'D Hasil', objekId: '', detail: 'D Hasil Pilpres "D Hasil Kecamatan 2" · DHasil_Pilpres_Kec2_dobel.pdf (diupload Siti Rahmawati) dihapus, file dihapus dari Drive', alasan: 'File dobel' }
   );
   return { dpd, users, c1, bacaleg, submissions: [], sessions: {}, log,
     settings: { waAdmin: '', namaAdmin: 'Admin RSPP DPW PKS Sumsel', appUrl: '' } };
@@ -136,7 +136,7 @@ export function createDemo() {
       if (!isFresh(row.uploadedAt, row.userId, u)) verify(u, r.password);
       const ket = String(r.keterangan || '').trim();
       if (ket === row.keterangan) return true;
-      addLog(db, u, row.dpdId, 'EDIT', 'C1', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JL[row.jenis] + ', ' + row.fileName + ')', r.alasan);
+      addLog(db, u, row.dpdId, 'EDIT', 'D Hasil', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JL[row.jenis] + ', ' + row.fileName + ')', r.alasan);
       Object.assign(row, { keterangan: ket, updatedAt: new Date().toISOString(), updatedBy: u.username });
       return true;
     }],
@@ -158,14 +158,14 @@ export function createDemo() {
         aksi = 'GANTI_FILE';
       }
       if (!notes.length) return row;
-      addLog(db, u, row.dpdId, aksi, 'C1', row.id, notes.join('; '), r.alasan);
+      addLog(db, u, row.dpdId, aksi, 'D Hasil', row.id, notes.join('; '), r.alasan);
       return Object.assign(row, patch);
     }],
     deleteC1: [['superadmin', 'dpd'], (db, r, u) => {
       verify(u, r.password);
       const row = db.c1.find((x) => x.id === r.id);
       if (!own(u, row)) throw new Error('Data tidak ditemukan');
-      addLog(db, u, row.dpdId, 'HAPUS', 'C1', row.id, 'C1 ' + JL[row.jenis] + ' "' + row.keterangan + '" · ' + row.fileName + ' (diupload ' + row.uploader + ') dihapus, file dihapus dari Drive', r.alasan);
+      addLog(db, u, row.dpdId, 'HAPUS', 'D Hasil', row.id, 'D Hasil ' + JL[row.jenis] + ' "' + row.keterangan + '" · ' + row.fileName + ' (diupload ' + row.uploader + ') dihapus, file dihapus dari Drive', r.alasan);
       db.c1 = db.c1.filter((x) => x.id !== r.id); return true;
     }],
     getFile: [ALL, (db, r, u) => {
@@ -206,11 +206,11 @@ export function createDemo() {
       const dpdId = target(u, r.dpdId);
       const c1 = db.c1.filter((x) => x.dpdId === dpdId);
       const missing = c1.filter((x) => !String(x.keterangan).trim()).length;
-      if (missing) throw new Error(missing + ' dokumen C1 belum ada keterangannya');
+      if (missing) throw new Error(missing + ' Rekap Kecamatan (D Hasil) belum ada keterangannya');
       const row = { id: uid('s'), dpdId, userId: u.id, uploader: r.uploader || u.nama, submittedAt: new Date().toISOString(),
         totalC1: c1.length, totalBacaleg: db.bacaleg.filter((x) => x.dpdId === dpdId).length };
       db.submissions.push(row);
-      addLog(db, u, dpdId, 'SUBMIT', 'Laporan', row.id, row.totalC1 + ' file C1, ' + row.totalBacaleg + ' usulan bacaleg dilaporkan ke admin', '');
+      addLog(db, u, dpdId, 'SUBMIT', 'Laporan', row.id, row.totalC1 + ' file D Hasil, ' + row.totalBacaleg + ' usulan bacaleg dilaporkan ke admin', '');
       return row;
     }],
     dashboard: [ALL, (db, r, u) => {
@@ -302,7 +302,7 @@ export function createDemo() {
       fileName: payload.fileName, fileId: '', fileUrl: '', mime: payload.mime, size: payload.size || 0,
       uploader: payload.uploader.trim(), uploadedAt: new Date().toISOString(), userId: u.id };
     db.c1.push(row);
-    addLog(db, u, row.dpdId, 'UPLOAD', 'C1', row.id, 'C1 ' + JL[row.jenis] + ' · ' + row.fileName + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
+    addLog(db, u, row.dpdId, 'UPLOAD', 'D Hasil', row.id, 'D Hasil ' + JL[row.jenis] + ' · ' + row.fileName + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
     save(db);
     onProgress && onProgress(100);
     return row;

@@ -6,12 +6,12 @@ import { dpdProgress, countsFromC1 } from './progress.js';
 export function buildWaReport({ dpd, uploader, c1, bacaleg, submittedAt, appUrl }) {
   const prog = dpdProgress({ ...dpd, counts: countsFromC1(c1) });
   const L = [];
-  L.push('*LAPORAN INPUT DATA C1 PEMILU 2024*');
+  L.push('*LAPORAN INPUT DATA HASIL SUARA PEMILU 2024*');
   L.push(dpd.nama);
   L.push('Pengupload: ' + uploader);
   L.push('Waktu submit: ' + fmtDateTime(submittedAt));
   L.push('');
-  L.push('*Dokumen C1: ' + c1.length + ' file*' + (prog.K ? ' (target ' + prog.K + ' kecamatan/tingkatan)' : ''));
+  L.push('*Rekap Kecamatan (D Hasil): ' + c1.length + ' file*' + (prog.K ? ' (target ' + prog.K + ' kecamatan/tingkatan)' : ''));
   JENIS.forEach((j) => {
     const list = c1.filter((x) => x.jenis === j.id);
     if (!list.length) return;

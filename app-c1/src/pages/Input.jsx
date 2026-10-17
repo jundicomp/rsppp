@@ -156,12 +156,12 @@ export default function Input() {
   const halfDrafts = drafts.filter((d) => filled(d) > 0).length;
   const total = c1List.length + (bacaleg || []).length;
 
-  let hint = c1List.length + ' file C1 dan ' + (bacaleg || []).length + ' usulan bacaleg siap disubmit.';
+  let hint = c1List.length + ' file D Hasil dan ' + (bacaleg || []).length + ' usulan bacaleg siap disubmit.';
   let hintCls = 'ok';
   if (noUploader) { hint = 'Nama pengupload belum diisi.'; hintCls = 'err'; }
   else if (!K) { hint = 'Jumlah kecamatan belum disimpan.'; hintCls = 'err'; }
   else if (anyUploading) { hint = 'Menunggu upload selesai…'; hintCls = ''; }
-  else if (missingNotes) { hint = missingNotes + ' keterangan C1 belum diisi.'; hintCls = 'err'; }
+  else if (missingNotes) { hint = missingNotes + ' keterangan D Hasil belum diisi.'; hintCls = 'err'; }
   else if (halfDrafts) { hint = halfDrafts + ' usulan bacaleg belum disimpan.'; hintCls = 'err'; }
   else if (!total) { hint = 'Belum ada data.'; hintCls = ''; }
   const ready = hintCls === 'ok';
@@ -205,13 +205,13 @@ export default function Input() {
             <input id="kec" className="input" type="number" min="1" inputMode="numeric" value={kec} onChange={(e) => setKec(e.target.value.replace(/[^0-9]/g, ''))} onBlur={saveKec} onKeyDown={(e) => e.key === 'Enter' && saveKec()} placeholder="0" />
             <span>kecamatan</span>
           </div>
-          <div className="help">Target upload C1 per tingkatan di {dpd?.nama.replace('DPD PKS ', '')}. Tersimpan otomatis.</div>
+          <div className="help">Target upload D Hasil per tingkatan di {dpd?.nama.replace('DPD PKS ', '')}. Tersimpan otomatis.</div>
         </div>
       </section>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <ScrollRow className="tabs-line" label="Kategori">
-          <button role="tab" aria-selected={cat === 'c1'} onClick={() => setCat('c1')}>Dokumen C1 <span className="pill-count">{c1List.length}</span></button>
+          <button role="tab" aria-selected={cat === 'c1'} onClick={() => setCat('c1')}>Rekap Kecamatan (D Hasil) <span className="pill-count">{c1List.length}</span></button>
           <button role="tab" aria-selected={cat === 'bacaleg'} onClick={() => setCat('bacaleg')}>Usulan Bacaleg <span className="pill-count">{bacaleg.length}</span></button>
         </ScrollRow>
 
@@ -247,7 +247,7 @@ export default function Input() {
                 onNote={(v) => patchSlot(tab, s.key, { keterangan: v })}
                 onRemove={slots[tab].filter((x) => x.status !== 'uploading').length > 1 ? () => removeSlot(tab, s.key) : null} />
             ))}
-            <button className="btn-dashed" onClick={() => addSlot(tab)}><Icon name="plus" size={16} /> Tambah file C1 {tabMeta.label}</button>
+            <button className="btn-dashed" onClick={() => addSlot(tab)}><Icon name="plus" size={16} /> Tambah file D Hasil {tabMeta.label}</button>
           </div>
         )}
 
@@ -326,7 +326,7 @@ function SavedItem({ no, row, label, note, fresh, state, onNote, onBlur, onView,
   return (
     <section className={'item' + (row.justDone ? ' fade-in' : '')}>
       <div className="item-top">
-        <span className="kicker">C1 {label} · #{no}</span>
+        <span className="kicker">D Hasil {label} · #{no}</span>
         <span className="acts">
           <IconBtn icon="eye" tone="view" label={'Lihat ' + row.fileName} onClick={onView} />
           <IconBtn icon="edit" label="Edit / ganti file" onClick={onEdit} />
@@ -346,7 +346,7 @@ function SavedItem({ no, row, label, note, fresh, state, onNote, onBlur, onView,
       {fresh ? (
         <div className="field">
           <label className="label" htmlFor={'k' + row.id}>Keterangan <span className="req">*</span></label>
-          <input id={'k' + row.id} className={'input' + (missing ? ' invalid' : '')} value={note} onChange={(e) => onNote(e.target.value)} onBlur={onBlur} placeholder="Contoh: C1 TPS 012 Kel. Ilir Barat, Kec. Bukit Kecil" />
+          <input id={'k' + row.id} className={'input' + (missing ? ' invalid' : '')} value={note} onChange={(e) => onNote(e.target.value)} onBlur={onBlur} placeholder="Contoh: D Hasil Kec. Bukit Kecil" />
           <div className={'help' + (missing ? ' err' : '')}>
             {missing ? 'Wajib diisi karena ada file.' : state === 'saving' ? 'Menyimpan…' : state === 'saved' ? 'Tersimpan' : state === 'error' ? 'Gagal menyimpan, coba ketik ulang' : 'Bisa langsung dikoreksi selama 1 jam setelah upload.'}
           </div>
@@ -372,7 +372,7 @@ function SlotItem({ no, slot, label, disabled, onFiles, onNote, onRemove }) {
   return (
     <section className="item">
       <div className="item-top">
-        <span className="kicker">C1 {label} · #{no}</span>
+        <span className="kicker">D Hasil {label} · #{no}</span>
         {onRemove && !busy && <button className="btn-icon" aria-label="Hapus slot" onClick={onRemove}><Icon name="trash" /></button>}
       </div>
       {busy ? (
@@ -398,14 +398,14 @@ function SlotItem({ no, slot, label, disabled, onFiles, onNote, onRemove }) {
             onDragLeave={() => setOver(false)}
             onDrop={(e) => { e.preventDefault(); setOver(false); if (!disabled) onFiles(e.dataTransfer.files); }}>
             <Icon name="upload" size={22} stroke={2} style={{ color: 'var(--hint)' }} />
-            <span><b style={{ fontWeight: 600 }}>Pilih file C1</b> <span className="hint-text">atau seret ke sini · PDF / foto · bisa pilih beberapa sekaligus</span></span>
+            <span><b style={{ fontWeight: 600 }}>Pilih file Rekap Kecamatan (D Hasil)</b> <span className="hint-text">atau seret ke sini · PDF / foto · bisa pilih beberapa sekaligus</span></span>
           </button>
           {slot.status === 'error' && <div className="notice err">Upload "{slot.fileName}" gagal: {slot.error}. Pilih file lagi untuk mencoba ulang.</div>}
         </>
       )}
       <div className="field">
         <label className="label">Keterangan <span className="req">*</span></label>
-        <input className="input" value={slot.keterangan} onChange={(e) => onNote(e.target.value)} placeholder="Contoh: C1 TPS 012 Kel. Ilir Barat, Kec. Bukit Kecil" disabled={busy} />
+        <input className="input" value={slot.keterangan} onChange={(e) => onNote(e.target.value)} placeholder="Contoh: D Hasil Kec. Bukit Kecil" disabled={busy} />
         <div className="help">Boleh diisi sebelum atau sesudah upload.</div>
       </div>
     </section>
