@@ -85,6 +85,8 @@ export default function Layout({ children, narrow }) {
   const nav = useNavigate();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
+  const [mini, setMini] = useState(() => { try { return localStorage.getItem('c1_side_mini') === '1'; } catch (e) { return false; } });
+  const toggleMini = () => setMini((m) => { try { localStorage.setItem('c1_side_mini', m ? '0' : '1'); } catch (e) { /* abaikan */ } return !m; });
   useEffect(() => { setOpen(false); }, [loc.pathname]);
   useEffect(() => {
     if (!open) return;
@@ -100,21 +102,28 @@ export default function Layout({ children, narrow }) {
 
   return (
     <div className="shell">
-      <aside className={'side' + (open ? ' open' : '')} aria-label="Menu utama">
+      <aside className={'side' + (open ? ' open' : '') + (mini ? ' mini' : '')} aria-label="Menu utama">
         <div className="side-top">
+          <button className="side-toggle" aria-label={mini ? 'Lebarkan menu' : 'Ciutkan menu'} title={mini ? 'Lebarkan menu' : 'Ciutkan menu'} aria-expanded={!mini} onClick={toggleMini}>
+            <Icon name="menu" size={22} />
+          </button>
           <Brand />
           <button className="side-close" aria-label="Tutup menu" onClick={() => setOpen(false)}><Icon name="close" size={22} /></button>
         </div>
         <nav className="side-nav">
           <div className="side-label">Menu</div>
           {main.map((it) => (
-            <NavLink key={it.to} to={it.to}><Icon name={it.icon} size={20} /><span>{it.label}</span></NavLink>
+            <NavLink key={it.to} to={it.to} title={mini ? it.label : undefined}><Icon name={it.icon} size={20} /><span>{it.label}</span></NavLink>
           ))}
           {admin.length > 0 && <div className="side-label">Admin</div>}
           {admin.map((it) => (
-            <NavLink key={it.to} to={it.to}><Icon name={it.icon} size={20} /><span>{it.label}</span></NavLink>
+            <NavLink key={it.to} to={it.to} title={mini ? it.label : undefined}><Icon name={it.icon} size={20} /><span>{it.label}</span></NavLink>
           ))}
         </nav>
+        <div className="side-credit">
+          <img src="./logo-mark.png" alt="" />
+          <span className="side-credit-text">Dibuat oleh <strong>{CREDIT}</strong><br />© {YEAR}</span>
+        </div>
       </aside>
       {open && <div className="side-backdrop" onClick={() => setOpen(false)} aria-hidden="true" />}
 
@@ -135,7 +144,6 @@ export default function Layout({ children, narrow }) {
           {user && <div className="hdr-right"><ProfileMenu user={user} onLogout={doLogout} /></div>}
         </header>
         <main className={'main' + (narrow ? ' narrow' : '')}>{children}</main>
-        <Footer />
       </div>
     </div>
   );

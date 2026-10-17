@@ -446,3 +446,38 @@ tr.me td { background: #ffe8dc !important; }
   .topbar .profile-menu { right: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .side { transition: none; } }
+
+/* ---------- sidebar: tombol ciutkan + kredit di bawah ---------- */
+.side { transition: width .2s ease-out; }
+.side-top { justify-content: flex-start; padding-left: 12px; }
+.side-top .brand { flex: 1; }
+.side-toggle { width: 40px; height: 40px; flex: none; border-radius: 10px; border: 1px solid #3a3733; background: transparent; color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.side-toggle:hover { background: #2a2a27; }
+.side-nav a span, .brand-text, .side-label, .side-credit-text { transition: opacity .15s; }
+.side-credit { display: flex; align-items: center; gap: 10px; padding: 14px 18px 18px; border-top: 1px solid #2f2e2b; font-size: 13px; line-height: 1.45; color: #fff; }
+.side-credit img { width: 26px; height: 26px; object-fit: contain; flex: none; }
+.side-credit strong { font-weight: 700; }
+
+/* mode ciut (desktop) */
+.side.mini { width: 76px; }
+.side.mini .side-top { flex-direction: column; gap: 12px; padding: 14px 0; align-items: center; }
+.side.mini .brand { flex: none; justify-content: center; }
+.side.mini .brand img { width: 40px; height: 40px; }
+.side.mini .brand-text, .side.mini .side-nav a span, .side.mini .side-credit-text { display: none; }
+.side.mini .side-label { font-size: 0; padding: 10px 0 4px; margin: 0 14px; border-top: 1px solid #2f2e2b; opacity: 1; }
+.side.mini .side-label:first-child { border-top: 0; padding-top: 4px; }
+.side.mini .side-nav { padding: 10px 10px; }
+.side.mini .side-nav a { justify-content: center; padding: 12px 0; }
+.side.mini .side-credit { justify-content: center; padding: 14px 0 18px; }
+
+@media (max-width: 1060px) {
+  .side-toggle { display: none; }
+  .side.mini { width: min(300px, 86vw); }
+  .side.mini .side-top { flex-direction: row; padding: 20px 16px 18px 18px; align-items: center; }
+  .side.mini .brand { flex: 1; justify-content: flex-start; }
+  .side.mini .brand-text, .side.mini .side-nav a span, .side.mini .side-credit-text { display: initial; }
+  .side.mini .brand-text { display: flex; }
+  .side.mini .side-label { font-size: 12px; margin: 0; border-top: 0; padding: 14px 12px 6px; opacity: .6; }
+  .side.mini .side-nav a { justify-content: flex-start; padding: 12px 14px; }
+  .side.mini .side-credit { justify-content: flex-start; padding: 14px 18px 18px; }
+}
