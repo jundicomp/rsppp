@@ -16,9 +16,11 @@ var JENIS = ['dprri', 'prov', 'kab', 'dpd', 'pilpres'];
 var JENIS_LABEL = { dprri: 'DPR RI', prov: 'DPRD Provinsi', kab: 'DPRD Kab/Kota', dpd: 'DPD RI', pilpres: 'Pilpres' };
 var TINGKAT = ['DPR RI', 'DPRD Provinsi', 'DPRD Kab/Kota', 'DPD RI'];
 var ROLES = ['superadmin', 'admin', 'dpd'];
+var RESET_MINUTES = 15;          // kode lupa password berlaku 15 menit
+var APP_NAME = 'Upload Dokumen Hasil Suara Pemilu 2024';
 
 var SHEETS = {
-  Users: ['id', 'username', 'nama', 'role', 'dpdId', 'passHash', 'salt', 'aktif', 'createdAt', 'lastLogin'],
+  Users: ['id', 'username', 'nama', 'role', 'dpdId', 'passHash', 'salt', 'aktif', 'createdAt', 'lastLogin', 'email', 'resetHash', 'resetExp', 'resetTries'],
   Sessions: ['token', 'userId', 'expires'],
   DPD: ['id', 'nama', 'jumlahKecamatan', 'updatedAt'],
   C1: ['id', 'dpdId', 'jenis', 'keterangan', 'fileName', 'fileId', 'fileUrl', 'mime', 'size', 'uploader', 'uploadedAt', 'userId', 'updatedAt', 'updatedBy', 'namaAsli'],
@@ -73,11 +75,39 @@ function setup() {
     createUser_({ username: 'superadmin', nama: 'Super Admin', role: 'superadmin', dpdId: '', password: pass });
     msg += '\nAkun superadmin dibuat.\nUsername: superadmin\nPassword: ' + pass + '\n(SEGERA ganti setelah login)';
   }
+  var akun = buatAkunDpd_();
+  if (akun.length) {
+    msg += '\n\nAkun operator DPD dibuat (' + akun.length + '). Catat dan bagikan ke masing-masing DPD:\n' +
+      akun.map(function (a) { return '- ' + a.dpd + ' → username: ' + a.username + ' | password: ' + a.password; }).join('\n') +
+      '\nOperator bisa mengisi email di menu Akun Saya supaya bisa reset password sendiri.';
+  }
   if (!PropertiesService.getScriptProperties().getProperty('FOLDER_ID')) {
     msg += '\n\nPERHATIAN: Script Property FOLDER_ID belum diisi.';
   }
   Logger.log(msg);
   return msg;
+}
+
+// Buat akun operator untuk setiap DPD yang belum punya. Username: dpd.<nama kab/kota>, contoh dpd.palembang
+function buatAkunDpd_() {
+  var users = rows_('Users');
+  var out = [];
+  rows_('DPD').forEach(function (d) {
+    if (users.some(function (u) { return u.role === 'dpd' && u.dpdId === d.id; })) return;
+    var nm = String(d.nama).replace(/^DPD PKS\s+/i, '');
+    var uname = 'dpd.' + nm.replace(/^(Kota|Kab\.?|Kabupaten)\s+/i, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    if (users.some(function (u) { return String(u.username).toLowerCase() === uname; })) uname += '.' + d.id;
+    var pass = randPass_();
+    users.push(createUser_({ username: uname, nama: 'Operator ' + nm, role: 'dpd', dpdId: d.id, password: pass }));
+    out.push({ dpd: nm, username: uname, password: pass });
+  });
+  return out;
+}
+
+function randPass_() {
+  var c = 'abcdefghjkmnpqrstuvwxyz23456789', s = '';
+  for (var i = 0; i < 8; i++) s += c.charAt(Math.floor(Math.random() * c.length));
+  return s;
 }
 
 // ====== HTTP ENTRY ======
@@ -90,6 +120,8 @@ function doPost(e) {
     var req = JSON.parse(e.postData.contents || '{}');
     var action = req.action;
     if (action === 'login') return json_(login_(req));
+    if (action === 'forgotPassword') return json_({ ok: true, data: forgotPassword_(req) });
+    if (action === 'resetWithCode') return json_({ ok: true, data: resetWithCode_(req) });
     var user = auth_(req.token);
     var h = HANDLERS[action];
     if (!h) throw new Error('Aksi tidak dikenal: ' + action);
@@ -108,6 +140,7 @@ var HANDLERS = {
   me: { roles: ALL, fn: function (r, u) { return publicUser_(u); } },
   logout: { roles: ALL, fn: function (r) { deleteWhere_('Sessions', 'token', r.token); return true; } },
   changePassword: { roles: ALL, fn: changePassword_ },
+  saveMyEmail: { roles: ALL, fn: saveMyEmail_ },
 
   listDpd: { roles: ALL, fn: function (r, u) {
     var all = rows_('DPD');
@@ -178,7 +211,7 @@ function auth_(token) {
 function publicUser_(u) {
   var dpd = u.dpdId ? rows_('DPD').filter(function (d) { return d.id === u.dpdId; })[0] : null;
   return { id: u.id, username: u.username, nama: u.nama, role: u.role, dpdId: u.dpdId || '',
-    dpdNama: dpd ? dpd.nama : '', aktif: truthy_(u.aktif), lastLogin: u.lastLogin || '', createdAt: u.createdAt || '' };
+    dpdNama: dpd ? dpd.nama : '', aktif: truthy_(u.aktif), lastLogin: u.lastLogin || '', createdAt: u.createdAt || '', email: u.email || '' };
 }
 
 function changePassword_(r, u) {
@@ -189,12 +222,92 @@ function changePassword_(r, u) {
   return true;
 }
 
+// ====== EMAIL & LUPA PASSWORD ======
+function normEmail_(e) {
+  var v = String(e || '').trim().toLowerCase();
+  if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) throw new Error('Format email tidak valid');
+  return v;
+}
+
+function checkEmailFree_(email, userId) {
+  if (!email) return;
+  var dup = rows_('Users').filter(function (x) { return String(x.email).toLowerCase() === email && x.id !== userId; })[0];
+  if (dup) throw new Error('Email sudah dipakai akun lain');
+}
+
+// User mengisi / mengganti email sendiri (perlu password supaya aman)
+function saveMyEmail_(r, u) {
+  verifyPass_(u, r.password);
+  var email = normEmail_(r.email);
+  return withLock_(function () {
+    checkEmailFree_(email, u.id);
+    update_('Users', u.id, { email: email });
+    return { email: email };
+  });
+}
+
+function maskEmail_(e) {
+  var p = String(e).split('@');
+  var n = p[0];
+  return (n.length <= 2 ? n.charAt(0) + '*' : n.slice(0, 2) + new Array(Math.max(2, n.length - 2) + 1).join('*')) + '@' + p[1];
+}
+
+// Langkah 1: kirim kode 6 angka ke email akun. Input: username atau email.
+function forgotPassword_(req) {
+  var key = String(req.username || '').trim().toLowerCase();
+  if (!key) throw new Error('Isi username atau email');
+  var u = rows_('Users').filter(function (x) {
+    return String(x.username).toLowerCase() === key || (x.email && String(x.email).toLowerCase() === key);
+  })[0];
+  if (!u || !truthy_(u.aktif)) throw new Error('Akun tidak ditemukan atau tidak aktif');
+  if (!u.email) throw new Error('Akun ini belum punya email. Hubungi admin untuk reset password.');
+  // cegah kirim berulang: tunggu 60 detik
+  if (u.resetExp && new Date(u.resetExp).getTime() - Date.now() > (RESET_MINUTES - 1) * 60000) {
+    throw new Error('Kode baru saja dikirim. Tunggu 1 menit sebelum minta lagi.');
+  }
+  var code = String(Math.floor(100000 + Math.random() * 900000));
+  var exp = new Date(Date.now() + RESET_MINUTES * 60000).toISOString();
+  withLock_(function () { update_('Users', u.id, { resetHash: hash_(code, u.salt), resetExp: exp, resetTries: 0 }); });
+  MailApp.sendEmail({
+    to: u.email,
+    subject: 'Kode reset password - ' + APP_NAME,
+    body: 'Halo ' + (u.nama || u.username) + ',\n\n' +
+      'Kode untuk reset password akun "' + u.username + '":\n\n    ' + code + '\n\n' +
+      'Kode berlaku ' + RESET_MINUTES + ' menit. Kalau Anda tidak meminta reset password, abaikan email ini.\n\n' +
+      APP_NAME + '\nRSPP DPW PKS Sumsel'
+  });
+  return { username: u.username, email: maskEmail_(u.email), minutes: RESET_MINUTES };
+}
+
+// Langkah 2: cek kode lalu ganti password.
+function resetWithCode_(req) {
+  var key = String(req.username || '').trim().toLowerCase();
+  var u = rows_('Users').filter(function (x) {
+    return String(x.username).toLowerCase() === key || (x.email && String(x.email).toLowerCase() === key);
+  })[0];
+  if (!u || !u.resetHash) throw new Error('Minta kode reset dulu');
+  if (!u.resetExp || new Date(u.resetExp).getTime() < Date.now()) throw new Error('Kode sudah kedaluwarsa. Minta kode baru.');
+  var tries = parseInt(u.resetTries, 10) || 0;
+  if (tries >= 5) throw new Error('Terlalu banyak percobaan. Minta kode baru.');
+  if (hash_(String(req.code || '').trim(), u.salt) !== u.resetHash) {
+    update_('Users', u.id, { resetTries: tries + 1 });
+    throw new Error('Kode salah. Sisa percobaan: ' + (4 - tries));
+  }
+  if (String(req.newPassword || '').length < 6) throw new Error('Password baru minimal 6 karakter');
+  var salt = Utilities.getUuid();
+  withLock_(function () {
+    update_('Users', u.id, { salt: salt, passHash: hash_(String(req.newPassword), salt), resetHash: '', resetExp: '', resetTries: 0 });
+    clearSessions_(u.id);
+  });
+  return true;
+}
+
 // ====== USERS (superadmin) ======
 function createUser_(d) {
   var salt = Utilities.getUuid();
   var row = { id: 'u' + Date.now().toString(36) + Math.floor(Math.random() * 1e4), username: String(d.username).trim().toLowerCase(),
     nama: d.nama || '', role: d.role, dpdId: d.role === 'dpd' ? d.dpdId : '', passHash: hash_(String(d.password), salt),
-    salt: salt, aktif: true, createdAt: now_(), lastLogin: '' };
+    salt: salt, aktif: true, createdAt: now_(), lastLogin: '', email: d.email ? normEmail_(d.email) : '' };
   append_('Users', row);
   return row;
 }
@@ -204,13 +317,15 @@ function saveUser_(r) {
   if (ROLES.indexOf(d.role) < 0) throw new Error('Role tidak valid');
   if (d.role === 'dpd' && !d.dpdId) throw new Error('Pilih DPD untuk user dengan role DPD');
   if (!/^[a-z0-9._-]{3,}$/i.test(String(d.username || ''))) throw new Error('Username minimal 3 karakter (huruf, angka, titik, minus)');
+  var email = normEmail_(d.email);
   return withLock_(function () {
+    checkEmailFree_(email, d.id);
     var users = rows_('Users');
     var dup = users.filter(function (x) { return String(x.username).toLowerCase() === String(d.username).toLowerCase() && x.id !== d.id; })[0];
     if (dup) throw new Error('Username sudah dipakai');
     if (d.id) {
       update_('Users', d.id, { username: String(d.username).toLowerCase(), nama: d.nama, role: d.role,
-        dpdId: d.role === 'dpd' ? d.dpdId : '', aktif: d.aktif !== false });
+        dpdId: d.role === 'dpd' ? d.dpdId : '', aktif: d.aktif !== false, email: email });
       if (d.aktif === false) clearSessions_(d.id);
       return publicUser_(rows_('Users').filter(function (x) { return x.id === d.id; })[0]);
     }

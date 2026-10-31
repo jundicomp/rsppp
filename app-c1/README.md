@@ -61,7 +61,7 @@ Akun dibuat oleh Super Admin di menu **User**. Setiap user bisa mengganti passwo
    - Centang **Show "appsscript.json" manifest file in editor**, lalu ganti isinya dengan `apps-script/appsscript.json`.
    - Di bagian **Script Properties**, tambahkan property `FOLDER_ID` berisi ID folder Drive tempat file D Hasil disimpan. ID folder adalah bagian URL setelah `/folders/`.
 5. Kembali ke editor, pilih fungsi **`setup`**, klik **Run**, lalu izinkan aksesnya.
-   - Sheet `Users`, `Sessions`, `DPD`, `C1`, `Bacaleg`, `Submissions`, dan `Settings` dibuat otomatis.
+   - Sheet `Users`, `Sessions`, `DPD`, `C1`, `Bacaleg`, `Submissions`, `Settings`, dan `Log` dibuat otomatis.
    - 17 DPD se-Sumsel terisi otomatis.
    - **Password superadmin** muncul di **Execution log**. Catat, lalu segera ganti setelah login.
 6. Buat Web App melalui **Deploy → New deployment → Web app**:
@@ -124,6 +124,14 @@ Setelah login pertama kali sebagai `superadmin`, lakukan langkah awal berikut:
 Untuk mencoba di komputer sendiri: `npm run dev` di dalam folder `app-c1`.
 
 ---
+
+## Akun operator DPD dan lupa password
+
+- Saat `setup` dijalankan, akun operator untuk setiap DPD dibuat otomatis (username `dpd.<nama kab/kota>`, misalnya `dpd.palembang`). Username dan password awalnya muncul di **Execution log**, jadi catat lalu bagikan ke masing-masing DPD.
+- Setiap user bisa mengisi **email** di menu **Akun Saya**. Superadmin juga bisa mengisinya di menu **User**.
+- Di halaman login ada tombol **Lupa password?**. Kode 6 angka dikirim ke email akun (berlaku 15 menit, maksimal 5 kali salah), lalu user membuat password baru sendiri.
+- Email dikirim lewat akun Google pemilik script (kuota Gmail biasa sekitar 100 email/hari, lebih dari cukup).
+- User yang belum mengisi email tetap direset oleh superadmin dari menu **User**.
 
 ## Edit, hapus, dan riwayat perubahan
 
