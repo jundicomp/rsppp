@@ -21,7 +21,7 @@ var SHEETS = {
   Users: ['id', 'username', 'nama', 'role', 'dpdId', 'passHash', 'salt', 'aktif', 'createdAt', 'lastLogin'],
   Sessions: ['token', 'userId', 'expires'],
   DPD: ['id', 'nama', 'jumlahKecamatan', 'updatedAt'],
-  C1: ['id', 'dpdId', 'jenis', 'keterangan', 'fileName', 'fileId', 'fileUrl', 'mime', 'size', 'uploader', 'uploadedAt', 'userId', 'updatedAt', 'updatedBy'],
+  C1: ['id', 'dpdId', 'jenis', 'keterangan', 'fileName', 'fileId', 'fileUrl', 'mime', 'size', 'uploader', 'uploadedAt', 'userId', 'updatedAt', 'updatedBy', 'namaAsli'],
   Bacaleg: ['id', 'dpdId', 'nama', 'tingkat', 'profil', 'pengusul', 'pencatat', 'createdAt', 'userId', 'updatedAt', 'updatedBy'],
   Log: ['id', 'waktu', 'userId', 'username', 'dpdId', 'aksi', 'objek', 'objekId', 'detail', 'alasan'],
   Submissions: ['id', 'dpdId', 'userId', 'uploader', 'submittedAt', 'totalC1', 'totalBacaleg'],
@@ -278,10 +278,11 @@ function uploadC1_(r, u) {
   var file = folder.createFile(Utilities.newBlob(bytes, r.mime || 'application/octet-stream', safe));
   var row = { id: 'c' + Date.now().toString(36) + Math.floor(Math.random() * 1e4), dpdId: dpdId, jenis: r.jenis,
     keterangan: String(r.keterangan || '').trim(), fileName: safe, fileId: file.getId(), fileUrl: file.getUrl(),
-    mime: r.mime || '', size: bytes.length, uploader: String(r.uploader).trim(), uploadedAt: now_(), userId: u.id };
+    mime: r.mime || '', size: bytes.length, uploader: String(r.uploader).trim(), uploadedAt: now_(), userId: u.id, namaAsli: safe };
   withLock_(function () {
+    row.fileName = applyName_(row, extOf_(safe), rows_('C1'));
     append_('C1', row);
-    log_(u, dpdId, 'UPLOAD', 'D Hasil', row.id, 'D Hasil ' + JENIS_LABEL[r.jenis] + ' · ' + safe + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
+    log_(u, dpdId, 'UPLOAD', 'D Hasil', row.id, 'D Hasil ' + JENIS_LABEL[r.jenis] + ' · ' + row.fileName + ' (asli: ' + safe + ')' + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
   });
   return row;
 }
@@ -305,12 +306,14 @@ function updateC1_(r, u) {
   var row = c1Row_(r.id, u);
   if (!isFresh_(row.uploadedAt, row.userId, u)) verifyPass_(u, r.password);
   var ket = String(r.keterangan || '').trim();
-  if (ket === String(row.keterangan)) return true;
+  if (ket === String(row.keterangan)) return { fileName: row.fileName };
+  var patch = { keterangan: ket, updatedAt: now_(), updatedBy: u.username };
   withLock_(function () {
-    update_('C1', r.id, { keterangan: ket, updatedAt: now_(), updatedBy: u.username });
-    log_(u, row.dpdId, 'EDIT', 'D Hasil', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JENIS_LABEL[row.jenis] + ', ' + row.fileName + ')', r.alasan);
+    patch.fileName = applyName_(Object.assign({}, row, { keterangan: ket }), extOf_(row.fileName), rows_('C1'));
+    update_('C1', r.id, patch);
+    log_(u, row.dpdId, 'EDIT', 'D Hasil', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JENIS_LABEL[row.jenis] + ', ' + patch.fileName + ')', r.alasan);
   });
-  return true;
+  return { fileName: patch.fileName };
 }
 
 // Edit dari tabel: keterangan, jenis, dan/atau ganti file. Selalu butuh password.
@@ -332,15 +335,17 @@ function editC1_(r, u) {
     var safe = String(r.fileName || 'file').replace(/[\\/:*?"<>|]/g, '_');
     var file = jenisFolder_(row.dpdId, jenis).createFile(Utilities.newBlob(bytes, r.mime || 'application/octet-stream', safe));
     trashFile_(row.fileId);
-    patch.fileName = safe; patch.fileId = file.getId(); patch.fileUrl = file.getUrl();
+    patch.fileName = safe; patch.namaAsli = safe; patch.fileId = file.getId(); patch.fileUrl = file.getUrl();
     patch.mime = r.mime || ''; patch.size = bytes.length;
-    notes.push('File diganti: ' + row.fileName + ' → ' + safe + ' (file lama dihapus dari Drive)');
+    notes.push('File diganti dengan ' + safe + ' (file lama dihapus dari Drive)');
     aksi = 'GANTI_FILE';
   } else if (jenis !== row.jenis && row.fileId) {
     try { DriveApp.getFileById(row.fileId).moveTo(jenisFolder_(row.dpdId, jenis)); } catch (e) {}
   }
   if (!notes.length) return row;
   withLock_(function () {
+    var next = Object.assign({}, row, patch);
+    patch.fileName = applyName_(next, extOf_(patch.namaAsli || row.fileName), rows_('C1'));
     update_('C1', row.id, patch);
     log_(u, row.dpdId, aksi, 'D Hasil', row.id, notes.join('; '), r.alasan);
   });
@@ -356,6 +361,63 @@ function deleteC1_(r, u) {
     log_(u, row.dpdId, 'HAPUS', 'D Hasil', row.id, 'D Hasil ' + JENIS_LABEL[row.jenis] + ' "' + row.keterangan + '" · ' + row.fileName + ' (diupload ' + row.uploader + ') dihapus, file dihapus dari Drive', r.alasan);
   });
   return true;
+}
+
+// ====== PENAMAAN FILE OTOMATIS ======
+// Format: "<Kab/Kota> - <Tingkatan> - <Keterangan>.<ext>"
+// contoh : "Kota Palembang - DPR RI - Kec. Ilir Barat I.pdf"
+// Nama asli dari operator tetap disimpan di kolom namaAsli.
+function extOf_(name) {
+  var m = /\.([A-Za-z0-9]{1,6})$/.exec(String(name || ''));
+  return m ? '.' + m[1].toLowerCase() : '';
+}
+
+function cleanName_(s) {
+  return String(s || '').replace(/[\\/:*?"<>|\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function autoName_(row, ext, all) {
+  var dpd = rows_('DPD').filter(function (d) { return d.id === row.dpdId; })[0];
+  var dpdName = String(dpd ? dpd.nama : row.dpdId).replace(/^DPD PKS\s+/i, '');
+  var ket = cleanName_(row.keterangan).slice(0, 80) || 'Belum ada keterangan';
+  var base = cleanName_(dpdName + ' - ' + JENIS_LABEL[row.jenis] + ' - ' + ket);
+  var taken = {};
+  (all || []).forEach(function (x) {
+    // dibandingkan tanpa ekstensi, supaya "X.pdf" dan "X.jpg" tetap dibedakan dengan nomor
+    if (x.id !== row.id && x.dpdId === row.dpdId && x.jenis === row.jenis) taken[String(x.fileName).replace(/\.[A-Za-z0-9]{1,6}$/, '').toLowerCase()] = true;
+  });
+  var name = base, n = 2;
+  while (taken[name.toLowerCase()]) name = base + ' (' + (n++) + ')';
+  return name + ext;
+}
+
+// Hitung nama baru dan ganti nama file di Drive. Mengembalikan nama baru (belum ditulis ke sheet).
+function applyName_(row, ext, all) {
+  var name = autoName_(row, ext, all);
+  if (name !== row.fileName && row.fileId) {
+    try { DriveApp.getFileById(row.fileId).setName(name); } catch (e) { /* file tidak ada */ }
+  }
+  return name;
+}
+
+// Samakan nama semua file satu DPD (dipakai saat submit, juga merapikan file lama).
+function renameAll_(dpdId) {
+  var all = rows_('C1');
+  all.filter(function (x) { return x.dpdId === dpdId; }).forEach(function (x) {
+    var name = applyName_(x, extOf_(x.fileName), all);
+    if (name !== x.fileName) {
+      var patch = { fileName: name };
+      if (!x.namaAsli) patch.namaAsli = x.fileName;
+      update_('C1', x.id, patch);
+      x.fileName = name;
+    }
+  });
+}
+
+// Jalankan manual dari editor Apps Script untuk merapikan nama file SEMUA DPD sekaligus.
+function rapikanNamaFile() {
+  rows_('DPD').forEach(function (d) { renameAll_(d.id); });
+  Logger.log('Nama file semua DPD sudah dirapikan.');
 }
 
 function trashFile_(fileId) {
@@ -445,6 +507,8 @@ function submit_(r, u) {
   var missing = c1.filter(function (x) { return !String(x.keterangan).trim(); }).length;
   if (missing) throw new Error(missing + ' Rekap Kecamatan (D Hasil) belum ada keterangannya');
   var bc = rows_('Bacaleg').filter(function (x) { return x.dpdId === dpdId; });
+  // Rapikan nama file: semua file DPD ini diberi nama otomatis sesuai keterangan terakhir
+  withLock_(function () { renameAll_(dpdId); });
   var row = { id: 's' + Date.now().toString(36), dpdId: dpdId, userId: u.id, uploader: r.uploader || u.nama,
     submittedAt: now_(), totalC1: c1.length, totalBacaleg: bc.length };
   withLock_(function () {

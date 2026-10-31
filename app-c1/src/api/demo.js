@@ -2,7 +2,7 @@
 // Aktif otomatis kalau VITE_API_URL kosong. Berguna untuk mencoba tampilan sebelum Google Sheet siap.
 import { JENIS, TINGKAT } from '../lib/constants.js';
 
-const KEY = 'c1pemilu_demo_v3';
+const KEY = 'c1pemilu_demo_v4';
 const DPD_NAMES = [
   'Kota Palembang', 'Kota Prabumulih', 'Kota Pagar Alam', 'Kota Lubuklinggau',
   'Kab. Banyuasin', 'Kab. Empat Lawang', 'Kab. Lahat', 'Kab. Muara Enim',
@@ -44,6 +44,8 @@ function seed() {
       }
     });
   });
+  const tmp = { dpd, c1: [] };
+  c1.forEach((x) => { x.namaAsli = x.fileName; x.fileName = autoName(tmp, x, '.pdf'); tmp.c1.push(x); });
   const bacaleg = [
     { dpdId: 'dpd01', nama: 'H. Muhammad Ridwan, S.E.', tingkat: 'DPRD Kab/Kota', profil: 'Pengusaha UMKM, Ketua DPC periode 2019–2024, aktif di kegiatan sosial masjid.', pengusul: 'DPC PKS Kec. Ilir Timur I' },
     { dpdId: 'dpd01', nama: 'dr. Nurul Hidayah', tingkat: 'DPRD Provinsi', profil: 'Dokter puskesmas, pengurus bidang perempuan, pembina posyandu.', pengusul: 'Bidang Perempuan DPD' },
@@ -105,6 +107,19 @@ function demoPdf(title) {
 }
 const ALL = ['superadmin', 'admin', 'dpd'];
 
+// Penamaan file otomatis — sama persis dengan autoName_ di Code.gs
+const extOf = (n) => { const m = /\.([A-Za-z0-9]{1,6})$/.exec(String(n || '')); return m ? '.' + m[1].toLowerCase() : ''; };
+const cleanName = (s) => String(s || '').replace(/[\\/:*?"<>|\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+function autoName(db, row, ext) {
+  const d = db.dpd.find((x) => x.id === row.dpdId);
+  const base = cleanName(String(d ? d.nama : row.dpdId).replace(/^DPD PKS\s+/i, '') + ' - ' + JL[row.jenis] + ' - ' + (cleanName(row.keterangan).slice(0, 80) || 'Belum ada keterangan'));
+  const taken = new Set(db.c1.filter((x) => x.id !== row.id && x.dpdId === row.dpdId && x.jenis === row.jenis)
+    .map((x) => String(x.fileName).replace(/\.[A-Za-z0-9]{1,6}$/, '').toLowerCase()));
+  let name = base, n = 2;
+  while (taken.has(name.toLowerCase())) name = base + ' (' + n++ + ')';
+  return name + ext;
+}
+
 export function createDemo() {
   const scope = (u, dpdId) => (row) => (u.role === 'dpd' ? row.dpdId === u.dpdId : !dpdId || row.dpdId === dpdId);
   const target = (u, dpdId) => {
@@ -135,10 +150,11 @@ export function createDemo() {
       if (!own(u, row)) throw new Error('Data tidak ditemukan');
       if (!isFresh(row.uploadedAt, row.userId, u)) verify(u, r.password);
       const ket = String(r.keterangan || '').trim();
-      if (ket === row.keterangan) return true;
-      addLog(db, u, row.dpdId, 'EDIT', 'D Hasil', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JL[row.jenis] + ', ' + row.fileName + ')', r.alasan);
-      Object.assign(row, { keterangan: ket, updatedAt: new Date().toISOString(), updatedBy: u.username });
-      return true;
+      if (ket === row.keterangan) return { fileName: row.fileName };
+      const fileName = autoName(db, { ...row, keterangan: ket }, extOf(row.fileName));
+      addLog(db, u, row.dpdId, 'EDIT', 'D Hasil', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JL[row.jenis] + ', ' + fileName + ')', r.alasan);
+      Object.assign(row, { keterangan: ket, fileName, updatedAt: new Date().toISOString(), updatedBy: u.username });
+      return { fileName };
     }],
     editC1: [['superadmin', 'dpd'], (db, r, u) => {
       verify(u, r.password);
@@ -153,11 +169,12 @@ export function createDemo() {
       let aksi = 'EDIT';
       const patch = { keterangan: ket, jenis, updatedAt: new Date().toISOString(), updatedBy: u.username };
       if (r.fileName) {
-        notes.push('File diganti: ' + row.fileName + ' → ' + r.fileName + ' (file lama dihapus dari Drive)');
-        Object.assign(patch, { fileName: r.fileName, mime: r.mime, size: r.size || 0 });
+        notes.push('File diganti dengan ' + r.fileName + ' (file lama dihapus dari Drive)');
+        Object.assign(patch, { namaAsli: r.fileName, mime: r.mime, size: r.size || 0 });
         aksi = 'GANTI_FILE';
       }
       if (!notes.length) return row;
+      patch.fileName = autoName(db, { ...row, ...patch }, extOf(r.fileName || row.fileName));
       addLog(db, u, row.dpdId, aksi, 'D Hasil', row.id, notes.join('; '), r.alasan);
       return Object.assign(row, patch);
     }],
@@ -207,6 +224,7 @@ export function createDemo() {
       const c1 = db.c1.filter((x) => x.dpdId === dpdId);
       const missing = c1.filter((x) => !String(x.keterangan).trim()).length;
       if (missing) throw new Error(missing + ' Rekap Kecamatan (D Hasil) belum ada keterangannya');
+      c1.forEach((x) => { const n = autoName(db, x, extOf(x.fileName)); if (n !== x.fileName) { x.namaAsli = x.namaAsli || x.fileName; x.fileName = n; } });
       const row = { id: uid('s'), dpdId, userId: u.id, uploader: r.uploader || u.nama, submittedAt: new Date().toISOString(),
         totalC1: c1.length, totalBacaleg: db.bacaleg.filter((x) => x.dpdId === dpdId).length };
       db.submissions.push(row);
@@ -300,9 +318,10 @@ export function createDemo() {
     if (!String(payload.uploader || '').trim()) throw new Error('Nama pengupload wajib diisi');
     const row = { id: uid('c'), dpdId: target(u, payload.dpdId), jenis: payload.jenis, keterangan: String(payload.keterangan || '').trim(),
       fileName: payload.fileName, fileId: '', fileUrl: '', mime: payload.mime, size: payload.size || 0,
-      uploader: payload.uploader.trim(), uploadedAt: new Date().toISOString(), userId: u.id };
+      uploader: payload.uploader.trim(), uploadedAt: new Date().toISOString(), userId: u.id, namaAsli: payload.fileName };
+    row.fileName = autoName(db, row, extOf(payload.fileName));
     db.c1.push(row);
-    addLog(db, u, row.dpdId, 'UPLOAD', 'D Hasil', row.id, 'D Hasil ' + JL[row.jenis] + ' · ' + row.fileName + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
+    addLog(db, u, row.dpdId, 'UPLOAD', 'D Hasil', row.id, 'D Hasil ' + JL[row.jenis] + ' · ' + row.fileName + ' (asli: ' + row.namaAsli + ')' + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
     save(db);
     onProgress && onProgress(100);
     return row;

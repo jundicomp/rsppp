@@ -48,7 +48,7 @@ export default function Rekap() {
   const c1Sorted = useMemo(() => [...(c1 || [])].sort((a, b) => String(b.uploadedAt).localeCompare(String(a.uploadedAt))), [c1]);
   const prog = useMemo(() => dpdProgress({ jumlahKecamatan: dpd?.jumlahKecamatan, counts: countsFromC1(c1 || []) }), [dpd, c1]);
   const ql = q.toLowerCase().trim();
-  const c1Rows = c1Sorted.filter((d) => (!jenis || d.jenis === jenis) && (!ql || [d.keterangan, d.fileName, d.uploader].join(' ').toLowerCase().includes(ql)));
+  const c1Rows = c1Sorted.filter((d) => (!jenis || d.jenis === jenis) && (!ql || [d.keterangan, d.fileName, d.namaAsli, d.uploader].join(' ').toLowerCase().includes(ql)));
   const bRows = [...(bacaleg || [])].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
     .filter((d) => (!tingkat || d.tingkat === tingkat) && (!ql || [d.nama, d.pengusul, d.pencatat].join(' ').toLowerCase().includes(ql)));
   const logRows = (log || []).filter((d) => (!aksi || d.aksi === aksi) && (!ql || [d.username, d.detail, d.alasan].join(' ').toLowerCase().includes(ql)));
@@ -64,7 +64,8 @@ export default function Rekap() {
     columns: [
       { label: 'Tingkatan', value: (r) => JENIS_LABEL[r.jenis], width: 16 },
       { label: 'Keterangan', value: 'keterangan', width: 38 },
-      { label: 'Nama File', value: 'fileName', width: 34 },
+      { label: 'Nama File', value: 'fileName', width: 48 },
+      { label: 'Nama File Asli', value: (r) => r.namaAsli || '', width: 26 },
       { label: 'Diupload Oleh', value: 'uploader', width: 20 },
       { label: 'Tanggal', value: (r) => fmtDate(r.uploadedAt), width: 14, align: 'center' },
       { label: 'Waktu (WIB)', value: (r) => fmtTime(r.uploadedAt), width: 12, align: 'center' },
