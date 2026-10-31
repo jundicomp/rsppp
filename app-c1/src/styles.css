@@ -481,3 +481,4 @@ tr.me td { background: #ffe8dc !important; }
   .side.mini .side-nav a { justify-content: flex-start; padding: 12px 14px; }
   .side.mini .side-credit { justify-content: flex-start; padding: 14px 18px 18px; }
 }
+.notice.ok { background: var(--ok-soft); color: var(--ok); }

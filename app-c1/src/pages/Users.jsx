@@ -6,7 +6,7 @@ import { fmtDateTime } from '../lib/format.js';
 import Icon from '../components/Icon.jsx';
 import { Loading, Modal, SearchBox, TableTabs, useToast } from '../components/ui.jsx';
 
-const blank = { id: '', username: '', nama: '', role: 'dpd', dpdId: '', password: '', aktif: true };
+const blank = { id: '', username: '', nama: '', role: 'dpd', dpdId: '', password: '', aktif: true, email: '' };
 
 function genPass() {
   const c = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -29,7 +29,7 @@ export default function Users() {
   useEffect(() => { load(); }, []);
 
   const list = useMemo(() => (users || []).filter((u) => (!role || u.role === role) &&
-    (!q || [u.username, u.nama, u.dpdNama].join(' ').toLowerCase().includes(q.toLowerCase()))), [users, q, role]);
+    (!q || [u.username, u.nama, u.dpdNama, u.email].join(' ').toLowerCase().includes(q.toLowerCase()))), [users, q, role]);
 
   const save = async () => {
     setBusy(true);
@@ -90,20 +90,21 @@ export default function Users() {
         <div className="card-head">
           <div><h2 className="card-title">Daftar user</h2><div className="card-sub">{list.length} user</div></div>
           <div className="tools">
-            <SearchBox value={q} onChange={setQ} placeholder="Cari username / nama / DPD" />
+            <SearchBox value={q} onChange={setQ} placeholder="Cari username / nama / email / DPD" />
           </div>
         </div>
         <TableTabs label="Hak akses" value={role} onChange={setRole}
           tabs={[{ id: '', label: 'Semua', count: (users || []).length }, ...ROLES.map((r) => ({ id: r.id, label: r.label, count: (users || []).filter((u) => u.role === r.id).length }))]} />
         {!users ? <div style={{ padding: 20 }}><Loading /></div> : (
           <div className="table-wrap">
-            <table className="tbl" style={{ minWidth: 860 }}>
-              <thead><tr><th>Username</th><th>Nama</th><th>Role</th><th>DPD</th><th>Login terakhir</th><th>Status</th><th /></tr></thead>
+            <table className="tbl" style={{ minWidth: 1000 }}>
+              <thead><tr><th>Username</th><th>Nama</th><th>Email</th><th>Role</th><th>DPD</th><th>Login terakhir</th><th>Status</th><th /></tr></thead>
               <tbody>
                 {list.map((u) => (
                   <tr key={u.id}>
                     <td className="strong">{u.username}</td>
                     <td>{u.nama}</td>
+                    <td>{u.email || <span className="hint-text">belum diisi</span>}</td>
                     <td><span className="badge">{ROLE_LABEL[u.role]}</span></td>
                     <td className="muted">{u.dpdNama ? u.dpdNama.replace('DPD PKS ', '') : '–'}</td>
                     <td className="muted nowrap">{u.lastLogin ? fmtDateTime(u.lastLogin) : 'Belum pernah'}</td>
@@ -160,6 +161,11 @@ export default function Users() {
               <label className="label" htmlFor="f-n">Nama</label>
               <input id="f-n" className="input" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} />
             </div>
+          </div>
+          <div className="field">
+            <label className="label" htmlFor="f-e">Email</label>
+            <input id="f-e" className="input" type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value.trim() })} placeholder="contoh: operator@gmail.com" />
+            <div className="help">Dipakai untuk reset password sendiri lewat tombol "Lupa password" di halaman login. Boleh dikosongkan, operator bisa mengisinya sendiri di menu Akun Saya.</div>
           </div>
           {!form.id && (
             <div className="field">

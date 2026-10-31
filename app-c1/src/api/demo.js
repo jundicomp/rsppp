@@ -78,7 +78,7 @@ function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (
 
 const pub = (db, u) => {
   const d = db.dpd.find((x) => x.id === u.dpdId);
-  const { password, ...rest } = u;
+  const { password, resetCode, ...rest } = u;
   return { ...rest, dpdNama: d ? d.nama : '' };
 };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -132,6 +132,13 @@ export function createDemo() {
   const H = {
     me: [ALL, (db, r, u) => pub(db, u)],
     logout: [ALL, (db, r) => { delete db.sessions[r.token]; return true; }],
+    saveMyEmail: [ALL, (db, r, u) => {
+      verify(u, r.password);
+      const email = String(r.email || '').trim().toLowerCase();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Format email tidak valid');
+      if (email && db.users.some((x) => x.id !== u.id && (x.email || '').toLowerCase() === email)) throw new Error('Email sudah dipakai akun lain');
+      u.email = email; return { email };
+    }],
     changePassword: [ALL, (db, r, u) => {
       if (u.password !== r.oldPassword) throw new Error('Password lama salah');
       if (String(r.newPassword || '').length < 6) throw new Error('Password baru minimal 6 karakter');
@@ -253,13 +260,13 @@ export function createDemo() {
       if (db.users.some((x) => x.username.toLowerCase() === d.username.toLowerCase() && x.id !== d.id)) throw new Error('Username sudah dipakai');
       if (d.id) {
         const u = db.users.find((x) => x.id === d.id);
-        Object.assign(u, { username: d.username.toLowerCase(), nama: d.nama, role: d.role, dpdId: d.role === 'dpd' ? d.dpdId : '', aktif: d.aktif !== false });
+        Object.assign(u, { username: d.username.toLowerCase(), nama: d.nama, role: d.role, dpdId: d.role === 'dpd' ? d.dpdId : '', aktif: d.aktif !== false, email: String(d.email || '').trim().toLowerCase() });
         if (u.aktif === false) Object.keys(db.sessions).forEach((t) => { if (db.sessions[t] === u.id) delete db.sessions[t]; });
         return pub(db, u);
       }
       if (String(d.password || '').length < 6) throw new Error('Password minimal 6 karakter');
       const u = { id: uid('u'), username: d.username.toLowerCase(), nama: d.nama, role: d.role, dpdId: d.role === 'dpd' ? d.dpdId : '',
-        password: d.password, aktif: true, createdAt: new Date().toISOString(), lastLogin: '' };
+        password: d.password, email: String(d.email || '').trim().toLowerCase(), aktif: true, createdAt: new Date().toISOString(), lastLogin: '' };
       db.users.push(u); return pub(db, u);
     }],
     resetPassword: [['superadmin'], (db, r) => {
@@ -290,6 +297,22 @@ export function createDemo() {
       u.lastLogin = new Date().toISOString();
       save(db);
       return { token: t, user: pub(db, u) };
+    }
+    if (action === 'forgotPassword' || action === 'resetWithCode') {
+      const key = String(payload.username || '').trim().toLowerCase();
+      const u = db.users.find((x) => x.username.toLowerCase() === key || (x.email && x.email.toLowerCase() === key));
+      if (action === 'forgotPassword') {
+        if (!u || !u.aktif) throw new Error('Akun tidak ditemukan atau tidak aktif');
+        if (!u.email) throw new Error('Akun ini belum punya email. Hubungi admin untuk reset password.');
+        u.resetCode = '123456'; save(db);
+        return { username: u.username, email: u.email, minutes: 15, demoCode: '123456' };
+      }
+      if (!u || !u.resetCode) throw new Error('Minta kode reset dulu');
+      if (String(payload.code).trim() !== u.resetCode) throw new Error('Kode salah');
+      if (String(payload.newPassword || '').length < 6) throw new Error('Password baru minimal 6 karakter');
+      u.password = payload.newPassword; delete u.resetCode;
+      Object.keys(db.sessions).forEach((t) => { if (db.sessions[t] === u.id) delete db.sessions[t]; });
+      save(db); return true;
     }
     const u = db.users.find((x) => x.id === db.sessions[token]);
     if (!u || !u.aktif) throw new Error('Sesi habis, silakan login lagi');
