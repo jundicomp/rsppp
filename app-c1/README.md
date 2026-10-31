@@ -19,13 +19,14 @@ Dibuat oleh **RSPP DPW PKS Sumsel**, 2026.
 rsppp/
 ├─ index.html      ← halaman Hasil Rekap DPRD (TIDAK diubah)
 ├─ app-c1/         ← source code aplikasi ini (React + Apps Script)
-└─ c1/             ← hasil build, diakses di https://jundicomp.github.io/rsppp/c1/
+├─ dhasil/         ← hasil build, diakses di https://jundicomp.github.io/rsppp/dhasil/
+└─ c1/             ← alamat lama, hanya mengalihkan ke /dhasil/
 ```
 
-Aplikasi ini berdiri sendiri di folder `app-c1/` dan `c1/`, jadi halaman lain di repo tetap aman.
+Aplikasi ini berdiri sendiri di folder `app-c1/` dan `dhasil/`, jadi halaman lain di repo tetap aman.
 
 ```
-GitHub Pages /rsppp/c1/ (React, file statis)
+GitHub Pages /rsppp/dhasil/ (React, file statis)
         │  fetch POST (JSON)
         ▼
 Google Apps Script Web App  ──►  Google Sheet (database)
@@ -61,7 +62,7 @@ Akun dibuat oleh Super Admin di menu **User**. Setiap user bisa mengganti passwo
    - Centang **Show "appsscript.json" manifest file in editor**, lalu ganti isinya dengan `apps-script/appsscript.json`.
    - Di bagian **Script Properties**, tambahkan property `FOLDER_ID` berisi ID folder Drive tempat file D Hasil disimpan. ID folder adalah bagian URL setelah `/folders/`.
 5. Kembali ke editor, pilih fungsi **`setup`**, klik **Run**, lalu izinkan aksesnya.
-   - Sheet `Users`, `Sessions`, `DPD`, `C1`, `Bacaleg`, `Submissions`, `Settings`, dan `Log` dibuat otomatis.
+   - Sheet `Users`, `Sessions`, `DPD`, `D Hasil`, `Bacaleg`, `Submissions`, `Settings`, dan `Log` dibuat otomatis.
    - 17 DPD se-Sumsel terisi otomatis.
    - **Password superadmin** muncul di **Execution log**. Catat, lalu segera ganti setelah login.
 6. Buat Web App melalui **Deploy → New deployment → Web app**:
@@ -104,21 +105,21 @@ contoh: Kota Palembang - DPR RI - Kec. Ilir Barat I.pdf
 
 ## Setup Frontend (GitHub Pages)
 
-Di sini tidak dipakai GitHub Actions. Hasil build langsung di-commit ke folder `c1/`, jadi pengaturan GitHub Pages yang sudah ada tidak perlu diubah.
+Di sini tidak dipakai GitHub Actions. Hasil build langsung di-commit ke folder `dhasil/`, jadi pengaturan GitHub Pages yang sudah ada tidak perlu diubah.
 
 ```bash
 cd app-c1
 npm install
 cp .env.example .env      # isi VITE_API_URL dengan Web app URL (/exec)
-npm run build             # hasilnya masuk ke ../c1
+npm run build             # hasilnya masuk ke ../dhasil
 ```
 
-Setelah itu commit dan push folder `app-c1/` dan `c1/`. Aplikasi bisa dibuka di `https://jundicomp.github.io/rsppp/c1/`. Folder `c1/` hanya tayang kalau ada di branch yang dipakai GitHub Pages, biasanya `main`.
+Setelah itu commit dan push folder `app-c1/` dan `dhasil/`. Aplikasi bisa dibuka di `https://jundicomp.github.io/rsppp/dhasil/`. Folder `dhasil/` hanya tayang kalau ada di branch yang dipakai GitHub Pages, biasanya `main`.
 
 Setelah login pertama kali sebagai `superadmin`, lakukan langkah awal berikut:
 
 - **Akun**: ganti password superadmin.
-- **Pengaturan**: isi nomor WA admin, alamat aplikasi (`https://jundicomp.github.io/rsppp/c1/`), dan jumlah kecamatan tiap DPD.
+- **Pengaturan**: isi nomor WA admin, alamat aplikasi (`https://jundicomp.github.io/rsppp/dhasil/`), dan jumlah kecamatan tiap DPD.
 - **User**: buat akun Operator DPD untuk tiap kab/kota dan akun Admin DPW.
 
 Untuk mencoba di komputer sendiri: `npm run dev` di dalam folder `app-c1`.
@@ -159,4 +160,4 @@ Untuk mencoba di komputer sendiri: `npm run dev` di dalam folder `app-c1`.
 - **Tulis bersamaan.** Penulisan ke Sheet memakai `LockService`, jadi upload dari banyak DPD di waktu yang sama tetap aman.
 - **Sumber data.** Sheet adalah database utama. Jangan ubah urutan atau nama kolom di baris pertama.
 
-> Catatan penamaan: di layar dokumen ini disebut **Rekap Kecamatan (D Hasil)**. Nama teknis di balik layar tetap `C1` (nama sheet, kolom `totalC1`, folder `app-c1`/`c1`, dan alamat `/rsppp/c1/`) supaya data dan link lama tidak rusak.
+> Catatan penamaan: di layar dokumen ini disebut **Rekap Kecamatan (D Hasil)**. Tab sheet bernama `D Hasil` (dulu `C1`; `setup` mengganti namanya otomatis tanpa menghapus data) dan alamat aplikasinya `/rsppp/dhasil/`. Alamat lama `/rsppp/c1/` tetap ada dan otomatis mengalihkan ke alamat baru. Beberapa nama teknis (kolom `totalC1`, folder source `app-c1`) dibiarkan.
