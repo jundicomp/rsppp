@@ -83,7 +83,22 @@ Akun dibuat oleh Super Admin di menu **User**. Setiap user bisa mengganti passwo
      └─ D Hasil Pilpres
 ```
 
-Subfolder dibuat otomatis. File tersimpan atas nama akun Google pemilik script. Supaya admin DPW bisa membuka file dari tombol **Lihat**, bagikan folder induknya ke email para admin (cukup akses *Viewer*).
+Subfolder dibuat otomatis.
+
+### Nama file otomatis
+
+Nama file dari operator (misalnya `IMG_20241215.jpg`) diganti sistem dengan format:
+
+```
+<Kab/Kota> - <Tingkatan> - <Keterangan>.<ext>
+contoh: Kota Palembang - DPR RI - Kec. Ilir Barat I.pdf
+```
+
+- Nama mengikuti keterangan. Kalau keterangan diubah, nama file di Drive ikut berubah.
+- Kalau ada nama yang sama di folder yang sama, sistem menambahkan `(2)`, `(3)`, dan seterusnya.
+- Saat **Submit**, semua file DPD tersebut dirapikan lagi namanya.
+- Nama asli dari operator tetap tercatat di kolom `namaAsli` (sheet C1) dan di Excel rekap.
+- Untuk merapikan file lama milik semua DPD sekaligus, jalankan fungsi `rapikanNamaFile` dari editor Apps Script. File tersimpan atas nama akun Google pemilik script. Supaya admin DPW bisa membuka file dari tombol **Lihat**, bagikan folder induknya ke email para admin (cukup akses *Viewer*).
 
 ---
 

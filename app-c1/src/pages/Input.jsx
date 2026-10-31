@@ -118,9 +118,10 @@ export default function Input() {
     delete pending.current[id];
     setSaving((s) => ({ ...s, [id]: 'saving' }));
     return call('updateC1', { id, keterangan: value })
-      .then(() => {
+      .then((out) => {
         setSaving((s) => ({ ...s, [id]: 'saved' }));
-        setC1((list) => list.map((x) => (x.id === id ? { ...x, keterangan: value } : x)));
+        const fileName = out && out.fileName;
+        setC1((list) => list.map((x) => (x.id === id ? { ...x, keterangan: value, ...(fileName ? { fileName } : {}) } : x)));
       })
       .catch((e) => { setSaving((s) => ({ ...s, [id]: 'error' })); toast(e.message, 'err'); });
   }, [setC1, toast]);
@@ -174,6 +175,8 @@ export default function Input() {
       const c1Now = c1List.map((x) => ({ ...x, keterangan: notes[x.id] ?? x.keterangan }));
       const text = buildWaReport({ dpd, uploader: uploader.trim(), c1: c1Now, bacaleg: bacaleg || [], submittedAt: res.submittedAt, appUrl: settings.appUrl });
       setReport(text);
+      // nama file dirapikan server saat submit — ambil daftar terbaru
+      call('listC1', { dpdId }).then((list) => setC1(list)).catch(() => {});
     } catch (e) { toast(e.message, 'err'); }
     setSubmitting(false);
   };
