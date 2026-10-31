@@ -64,7 +64,7 @@ export default function Settings() {
           </div>
           <div className="field span-all">
             <label className="label" htmlFor="url">Alamat aplikasi (dicantumkan di laporan)</label>
-            <input id="url" className="input" value={s.appUrl || ''} onChange={(e) => setS({ ...s, appUrl: e.target.value })} placeholder="https://jundicomp.github.io/rsppp/c1/" />
+            <input id="url" className="input" value={s.appUrl || ''} onChange={(e) => setS({ ...s, appUrl: e.target.value })} placeholder="https://jundicomp.github.io/rsppp/dhasil/" />
           </div>
         </div>
         <div><button className="btn btn-primary" onClick={saveSettings} disabled={busy}>Simpan pengaturan</button></div>

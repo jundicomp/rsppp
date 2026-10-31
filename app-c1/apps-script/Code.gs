@@ -16,6 +16,7 @@ var JENIS = ['dprri', 'prov', 'kab', 'dpd', 'pilpres'];
 var JENIS_LABEL = { dprri: 'DPR RI', prov: 'DPRD Provinsi', kab: 'DPRD Kab/Kota', dpd: 'DPD RI', pilpres: 'Pilpres' };
 var TINGKAT = ['DPR RI', 'DPRD Provinsi', 'DPRD Kab/Kota', 'DPD RI'];
 var ROLES = ['superadmin', 'admin', 'dpd'];
+var SH_DH = 'D Hasil';           // nama tab sheet data Rekap Kecamatan (dulu 'C1')
 var RESET_MINUTES = 15;          // kode lupa password berlaku 15 menit
 var APP_NAME = 'Upload Dokumen Hasil Suara Pemilu 2024';
 
@@ -23,7 +24,7 @@ var SHEETS = {
   Users: ['id', 'username', 'nama', 'role', 'dpdId', 'passHash', 'salt', 'aktif', 'createdAt', 'lastLogin', 'email', 'resetHash', 'resetExp', 'resetTries'],
   Sessions: ['token', 'userId', 'expires'],
   DPD: ['id', 'nama', 'jumlahKecamatan', 'updatedAt'],
-  C1: ['id', 'dpdId', 'jenis', 'keterangan', 'fileName', 'fileId', 'fileUrl', 'mime', 'size', 'uploader', 'uploadedAt', 'userId', 'updatedAt', 'updatedBy', 'namaAsli'],
+  'D Hasil': ['id', 'dpdId', 'jenis', 'keterangan', 'fileName', 'fileId', 'fileUrl', 'mime', 'size', 'uploader', 'uploadedAt', 'userId', 'updatedAt', 'updatedBy', 'namaAsli'],
   Bacaleg: ['id', 'dpdId', 'nama', 'tingkat', 'profil', 'pengusul', 'pencatat', 'createdAt', 'userId', 'updatedAt', 'updatedBy'],
   Log: ['id', 'waktu', 'userId', 'username', 'dpdId', 'aksi', 'objek', 'objekId', 'detail', 'alasan'],
   Submissions: ['id', 'dpdId', 'userId', 'uploader', 'submittedAt', 'totalC1', 'totalBacaleg'],
@@ -41,6 +42,9 @@ var DPD_SUMSEL = [
 // ====== SETUP (jalankan sekali dari editor) ======
 function setup() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  // migrasi: tab lama 'C1' diganti nama menjadi 'D Hasil' (data tetap)
+  var old = ss.getSheetByName('C1');
+  if (old && !ss.getSheetByName(SH_DH)) old.setName(SH_DH);
   Object.keys(SHEETS).forEach(function (name) {
     var sh = ss.getSheetByName(name) || ss.insertSheet(name);
     if (sh.getLastRow() === 0) {
@@ -148,7 +152,7 @@ var HANDLERS = {
   } },
   setKecamatan: { roles: ALL, fn: setKecamatan_ },
 
-  listC1: { roles: ALL, fn: function (r, u) { return rows_('C1').filter(scopeFilter_(r, u)); } },
+  listC1: { roles: ALL, fn: function (r, u) { return rows_(SH_DH).filter(scopeFilter_(r, u)); } },
   uploadC1: { roles: ['dpd', 'superadmin'], fn: uploadC1_ },
   updateC1: { roles: ['dpd', 'superadmin'], fn: updateC1_ },
   editC1: { roles: ['dpd', 'superadmin'], fn: editC1_ },
@@ -367,7 +371,7 @@ function saveDpd_(r) {
   });
 }
 
-// ====== REKAP KECAMATAN (D HASIL) — sheet 'C1' ======
+// ====== REKAP KECAMATAN (D HASIL) — sheet 'D Hasil' ======
 function scopeFilter_(r, u) {
   return function (row) {
     if (u.role === 'dpd') return row.dpdId === u.dpdId;
@@ -395,15 +399,15 @@ function uploadC1_(r, u) {
     keterangan: String(r.keterangan || '').trim(), fileName: safe, fileId: file.getId(), fileUrl: file.getUrl(),
     mime: r.mime || '', size: bytes.length, uploader: String(r.uploader).trim(), uploadedAt: now_(), userId: u.id, namaAsli: safe };
   withLock_(function () {
-    row.fileName = applyName_(row, extOf_(safe), rows_('C1'));
-    append_('C1', row);
+    row.fileName = applyName_(row, extOf_(safe), rows_(SH_DH));
+    append_(SH_DH, row);
     log_(u, dpdId, 'UPLOAD', 'D Hasil', row.id, 'D Hasil ' + JENIS_LABEL[r.jenis] + ' · ' + row.fileName + ' (asli: ' + safe + ')' + (row.keterangan ? ' · "' + row.keterangan + '"' : ''), '');
   });
   return row;
 }
 
 function c1Row_(id, u) {
-  var row = rows_('C1').filter(function (x) { return x.id === id; })[0];
+  var row = rows_(SH_DH).filter(function (x) { return x.id === id; })[0];
   if (!row || (u.role === 'dpd' && row.dpdId !== u.dpdId)) throw new Error('Data tidak ditemukan');
   return row;
 }
@@ -424,8 +428,8 @@ function updateC1_(r, u) {
   if (ket === String(row.keterangan)) return { fileName: row.fileName };
   var patch = { keterangan: ket, updatedAt: now_(), updatedBy: u.username };
   withLock_(function () {
-    patch.fileName = applyName_(Object.assign({}, row, { keterangan: ket }), extOf_(row.fileName), rows_('C1'));
-    update_('C1', r.id, patch);
+    patch.fileName = applyName_(Object.assign({}, row, { keterangan: ket }), extOf_(row.fileName), rows_(SH_DH));
+    update_(SH_DH, r.id, patch);
     log_(u, row.dpdId, 'EDIT', 'D Hasil', row.id, 'Keterangan: "' + row.keterangan + '" → "' + ket + '" (' + JENIS_LABEL[row.jenis] + ', ' + patch.fileName + ')', r.alasan);
   });
   return { fileName: patch.fileName };
@@ -460,8 +464,8 @@ function editC1_(r, u) {
   if (!notes.length) return row;
   withLock_(function () {
     var next = Object.assign({}, row, patch);
-    patch.fileName = applyName_(next, extOf_(patch.namaAsli || row.fileName), rows_('C1'));
-    update_('C1', row.id, patch);
+    patch.fileName = applyName_(next, extOf_(patch.namaAsli || row.fileName), rows_(SH_DH));
+    update_(SH_DH, row.id, patch);
     log_(u, row.dpdId, aksi, 'D Hasil', row.id, notes.join('; '), r.alasan);
   });
   return Object.assign(row, patch);
@@ -472,7 +476,7 @@ function deleteC1_(r, u) {
   var row = c1Row_(r.id, u);
   trashFile_(row.fileId);
   withLock_(function () {
-    deleteWhere_('C1', 'id', r.id);
+    deleteWhere_(SH_DH, 'id', r.id);
     log_(u, row.dpdId, 'HAPUS', 'D Hasil', row.id, 'D Hasil ' + JENIS_LABEL[row.jenis] + ' "' + row.keterangan + '" · ' + row.fileName + ' (diupload ' + row.uploader + ') dihapus, file dihapus dari Drive', r.alasan);
   });
   return true;
@@ -517,13 +521,13 @@ function applyName_(row, ext, all) {
 
 // Samakan nama semua file satu DPD (dipakai saat submit, juga merapikan file lama).
 function renameAll_(dpdId) {
-  var all = rows_('C1');
+  var all = rows_(SH_DH);
   all.filter(function (x) { return x.dpdId === dpdId; }).forEach(function (x) {
     var name = applyName_(x, extOf_(x.fileName), all);
     if (name !== x.fileName) {
       var patch = { fileName: name };
       if (!x.namaAsli) patch.namaAsli = x.fileName;
-      update_('C1', x.id, patch);
+      update_(SH_DH, x.id, patch);
       x.fileName = name;
     }
   });
@@ -618,7 +622,7 @@ function deleteBacaleg_(r, u) {
 // ====== SUBMIT & DASHBOARD ======
 function submit_(r, u) {
   var dpdId = targetDpd_(r, u);
-  var c1 = rows_('C1').filter(function (x) { return x.dpdId === dpdId; });
+  var c1 = rows_(SH_DH).filter(function (x) { return x.dpdId === dpdId; });
   var missing = c1.filter(function (x) { return !String(x.keterangan).trim(); }).length;
   if (missing) throw new Error(missing + ' Rekap Kecamatan (D Hasil) belum ada keterangannya');
   var bc = rows_('Bacaleg').filter(function (x) { return x.dpdId === dpdId; });
@@ -637,7 +641,7 @@ function dashboard_(r, u) {
   // Semua role melihat ringkasan semua DPD (hanya angka agregat, bukan isi dokumen),
   // supaya operator DPD bisa membandingkan progresnya dengan DPD lain.
   var dpds = rows_('DPD');
-  var c1 = rows_('C1'), bc = rows_('Bacaleg'), subs = rows_('Submissions');
+  var c1 = rows_(SH_DH), bc = rows_('Bacaleg'), subs = rows_('Submissions');
   return dpds.map(function (d) {
     var counts = {};
     JENIS.forEach(function (j) { counts[j] = 0; });
