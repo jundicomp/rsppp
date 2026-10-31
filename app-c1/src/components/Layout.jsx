@@ -70,11 +70,11 @@ function ProfileMenu({ user, onLogout }) {
 
 function Brand({ compact }) {
   return (
-    <NavLink to="/" className={'brand' + (compact ? ' compact' : '')}>
+    <NavLink to="/" className={'brand' + (compact ? ' compact' : '')} title={APP_TITLE}>
       <img src="./logo-mark.png" alt="Logo PKS" />
       <span className="brand-text">
-        <span className="brand-title">{APP_TITLE}</span>
-        {!compact && <span className="brand-sub">{APP_ORG}</span>}
+        <span className="brand-title">D Hasil</span>
+        <span className="brand-sub">Pemilu 2024</span>
       </span>
     </NavLink>
   );

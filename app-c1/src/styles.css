@@ -482,3 +482,10 @@ tr.me td { background: #ffe8dc !important; }
   .side.mini .side-credit { justify-content: flex-start; padding: 14px 18px 18px; }
 }
 .notice.ok { background: var(--ok-soft); color: var(--ok); }
+
+/* brand ringkas: "D Hasil / Pemilu 2024" */
+.brand-title { font-size: 20px; line-height: 1.15; }
+.brand-sub { font-size: 14px; font-weight: 600; opacity: .9; }
+.brand.compact .brand-title { font-size: 17px; }
+.brand.compact .brand-sub { font-size: 12px; }
+.topbar-mobile-brand .brand-sub { color: var(--ink); }
